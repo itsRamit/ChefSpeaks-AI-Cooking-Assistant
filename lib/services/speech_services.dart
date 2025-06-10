@@ -39,7 +39,7 @@ class SpeechService {
     );
   }
 
-  void stop() {
+  void stop() { 
     _isListening = false;
     _speech.stop();
   }

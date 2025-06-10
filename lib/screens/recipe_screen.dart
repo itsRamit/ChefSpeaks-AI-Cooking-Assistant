@@ -1,3 +1,4 @@
+import 'package:chefspeaks/widgets/text_card.dart';
 import 'package:flutter/material.dart';
 
 class RecipeScreen extends StatelessWidget {
@@ -25,14 +26,7 @@ class RecipeScreen extends StatelessWidget {
         child: Center(
           child: Padding(
             padding: const EdgeInsets.all(24.0),
-            child: Text(
-              prompt,
-              style: const TextStyle(
-                fontSize: 22,
-                color: Colors.white,
-              ),
-              textAlign: TextAlign.center,
-            ),
+            child: TextCard(text: prompt)
           ),
         ),
       ),
