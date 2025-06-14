@@ -1,5 +1,8 @@
+import 'dart:developer';
+
 import 'package:chefspeaks/screens/recipe_screen.dart';
-import 'package:chefspeaks/services/speech_services.dart';
+import 'package:chefspeaks/services/stt_services.dart';
+import 'package:chefspeaks/services/wakeup_service.dart';
 import 'package:chefspeaks/widgets/custom_text.dart';
 import 'package:chefspeaks/widgets/voice_button.dart';
 import 'package:flutter/material.dart';
@@ -17,6 +20,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final SpeechService _speechService = SpeechService();
   final TextEditingController _textController = TextEditingController();
+  final WakeupService _wakeupService = WakeupService();
   bool isListening = false;
   String recognizedText = '';
   bool isTyping = false;
@@ -29,6 +33,12 @@ class _HomeScreenState extends State<HomeScreen> {
         isTyping = _textController.text.trim().isNotEmpty;
       });
     });
+    _wakeupService.initialize(onWakeWordDetected: _onWakeDetected);
+  }
+  void _onWakeDetected() async {
+    await _wakeupService.pause();
+    await _listen();
+    // await _wakeupService.resume();
   }
 
   @override
@@ -51,7 +61,9 @@ class _HomeScreenState extends State<HomeScreen> {
         onStatus: (status) async {
           if (status == 'notListening') {
             setState(() => isListening = false);
+            await _wakeupService.resume();
             if (recognizedText.trim().isNotEmpty) {
+              log('here2');
               final prompt = recognizedText.trim();
               setState(() => recognizedText = '');
               await Future.delayed(const Duration(milliseconds: 300));
@@ -67,7 +79,9 @@ class _HomeScreenState extends State<HomeScreen> {
           }
         },
         onError: (error) {
+          log(error.toString());
           setState(() => isListening = false);
+          _wakeupService.resume();
         },
       );
       if (available) {
@@ -86,6 +100,7 @@ class _HomeScreenState extends State<HomeScreen> {
     } else {
       setState(() => isListening = false);
       _speechService.stop();
+      await _wakeupService.resume();
     }
   }
 

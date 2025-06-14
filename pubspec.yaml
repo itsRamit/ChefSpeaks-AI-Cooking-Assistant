@@ -37,6 +37,7 @@ dependencies:
   speech_to_text: ^7.0.0
   permission_handler: ^12.0.0+1
   google_fonts: ^6.2.1
+  porcupine_flutter: ^3.0.4
 
 dev_dependencies:
   flutter_test:
