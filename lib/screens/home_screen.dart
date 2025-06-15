@@ -1,44 +1,46 @@
 import 'dart:developer';
-
+import 'dart:async';
+import 'package:chefspeaks/providers/wakeup_service_provider.dart';
 import 'package:chefspeaks/screens/recipe_screen.dart';
 import 'package:chefspeaks/services/stt_services.dart';
-import 'package:chefspeaks/services/wakeup_service.dart';
 import 'package:chefspeaks/widgets/custom_text.dart';
 import 'package:chefspeaks/widgets/voice_button.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends ConsumerState<HomeScreen> {
   final SpeechService _speechService = SpeechService();
   final TextEditingController _textController = TextEditingController();
-  final WakeupService _wakeupService = WakeupService();
   bool isListening = false;
   String recognizedText = '';
   bool isTyping = false;
+  Timer? _debounceTimer;
 
   @override
   void initState() {
     super.initState();
+    final wakeupService = ref.read(wakeupServiceProvider);
     _textController.addListener(() {
       setState(() {
         isTyping = _textController.text.trim().isNotEmpty;
       });
     });
-    _wakeupService.initialize(onWakeWordDetected: _onWakeDetected);
+    wakeupService.initialize(onWakeWordDetected: _onWakeDetected);
   }
   void _onWakeDetected() async {
-    await _wakeupService.pause();
+    final wakeupService = ref.read(wakeupServiceProvider);
+    await wakeupService.pause();
     await _listen();
-    // await _wakeupService.resume();
   }
 
   @override
@@ -48,61 +50,66 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _listen() async {
-    var status = await Permission.microphone.request();
-    if (!status.isGranted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Microphone permission is required')),
-      );
-      return;
-    }
+  var status = await Permission.microphone.request();
+  if (!status.isGranted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Microphone permission is required')),
+    );
+    return;
+  }
 
-    if (!isListening) {
+  if (!isListening) {
       bool available = await _speechService.initialize(
         onStatus: (status) async {
           if (status == 'notListening') {
             setState(() => isListening = false);
-            await _wakeupService.resume();
-            if (recognizedText.trim().isNotEmpty) {
-              log('here2');
-              final prompt = recognizedText.trim();
-              setState(() => recognizedText = '');
-              await Future.delayed(const Duration(milliseconds: 300));
-              if (mounted) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => RecipeScreen(prompt: prompt),
-                  ),
-                );
-              }
-            }
+            final wakeupService = ref.read(wakeupServiceProvider);
+            await wakeupService.resume();
+            log('here1');
           }
         },
         onError: (error) {
           log(error.toString());
           setState(() => isListening = false);
-          _wakeupService.resume();
         },
       );
+
       if (available) {
         setState(() {
           isListening = true;
           recognizedText = '';
         });
+
         _speechService.listen(
-          onResult: (words) {
+          onResult: (words) async {
             setState(() {
               recognizedText = words;
             });
+            _debounceTimer?.cancel();
+            _debounceTimer = Timer(const Duration(seconds: 1), () async {
+                  if (words.trim().isNotEmpty) {
+                  log('here2');
+                  final prompt = words.trim();
+                  if (mounted) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => RecipeScreen(prompt: prompt),
+                      ),
+                    );
+                  }
+                }
+              }
+            );
           },
         );
       }
     } else {
       setState(() => isListening = false);
       _speechService.stop();
-      await _wakeupService.resume();
     }
   }
+
 
 
   @override
@@ -268,7 +275,19 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: const Icon(Icons.send, color: Colors.white),
                         ),
                         onPressed: () {
-                          // TODO: Add your send action
+                          final prompt = _textController.text.trim();
+                          if (prompt.isNotEmpty) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => RecipeScreen(prompt: prompt),
+                              ),
+                            );
+                            _textController.clear();
+                            setState(() {
+                              isTyping = false;
+                            });
+                          }
                         },
                       ),
                     ),
@@ -276,7 +295,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 )
               : VoiceButton(
                   isListening: isListening,
-                  onTap: _listen,
+                  onTap: _onWakeDetected,
                   size: w / 6,
                 ),
             )
