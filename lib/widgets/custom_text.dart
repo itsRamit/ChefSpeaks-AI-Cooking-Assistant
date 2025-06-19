@@ -25,6 +25,13 @@ class CustomText extends StatelessWidget {
         fontSize: size,
         color: color,
         fontWeight: bold ? FontWeight.w600 : FontWeight.normal,
+        shadows: [
+          Shadow(
+            color: Colors.black26,
+            blurRadius: 4,
+            offset: Offset(1, 1),
+          ),
+        ],
       ),
       textAlign: alignCenter ? TextAlign.center : TextAlign.start,
     );

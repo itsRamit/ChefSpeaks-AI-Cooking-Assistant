@@ -1,5 +1,5 @@
-import 'dart:developer';
 import 'dart:async';
+import 'dart:developer';
 import 'package:chefspeaks/providers/wakeup_service_provider.dart';
 import 'package:chefspeaks/screens/recipe_screen.dart';
 import 'package:chefspeaks/services/stt_services.dart';
@@ -9,7 +9,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:permission_handler/permission_handler.dart';
-
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -21,7 +20,6 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   final SpeechService _speechService = SpeechService();
   final TextEditingController _textController = TextEditingController();
-  bool isListening = false;
   String recognizedText = '';
   bool isTyping = false;
   Timer? _debounceTimer;
@@ -37,6 +35,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     });
     wakeupService.initialize(onWakeWordDetected: _onWakeDetected);
   }
+
   void _onWakeDetected() async {
     final wakeupService = ref.read(wakeupServiceProvider);
     await wakeupService.pause();
@@ -50,19 +49,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Future<void> _listen() async {
-  var status = await Permission.microphone.request();
-  if (!status.isGranted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Microphone permission is required')),
-    );
-    return;
-  }
+    var status = await Permission.microphone.request();
+    if (!status.isGranted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Microphone permission is required')),
+      );
+      return;
+    }
 
-  if (!isListening) {
+    if (!ref.read(isListeningProvider)) {
       bool available = await _speechService.initialize(
         onStatus: (status) async {
           if (status == 'notListening') {
-            setState(() => isListening = false);
+            ref.read(isListeningProvider.notifier).state = false;
             final wakeupService = ref.read(wakeupServiceProvider);
             await wakeupService.resume();
             log('here1');
@@ -70,13 +69,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         },
         onError: (error) {
           log(error.toString());
-          setState(() => isListening = false);
+          ref.read(isListeningProvider.notifier).state = false;
         },
       );
 
       if (available) {
+        ref.read(isListeningProvider.notifier).state = true;
         setState(() {
-          isListening = true;
           recognizedText = '';
         });
 
@@ -87,35 +86,34 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             });
             _debounceTimer?.cancel();
             _debounceTimer = Timer(const Duration(seconds: 1), () async {
-                  if (words.trim().isNotEmpty) {
-                  log('here2');
-                  final prompt = words.trim();
-                  if (mounted) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => RecipeScreen(prompt: prompt),
-                      ),
-                    );
-                  }
+              if (words.trim().isNotEmpty) {
+                log('here2');
+                final prompt = words.trim();
+                if (mounted) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => RecipeScreen(prompt: prompt),
+                    ),
+                  );
                 }
               }
-            );
+            });
           },
         );
       }
     } else {
-      setState(() => isListening = false);
+      ref.read(isListeningProvider.notifier).state = false;
       _speechService.stop();
     }
   }
-
-
 
   @override
   Widget build(BuildContext context) {
     final h = MediaQuery.of(context).size.height;
     final w = MediaQuery.of(context).size.width;
+    final isListening = ref.watch(isListeningProvider);
+
     return Scaffold(
       body: Stack(
         children: [
@@ -143,7 +141,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             ? "Listening..."
                             : 'Hi Ramit,\n Which recipe are we whipping up today?'
                         : recognizedText,
-                    size: w/9,
+                    size: w / 9,
                     bold: true,
                     alignCenter: true,
                   ),
@@ -165,14 +163,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       end: Alignment.bottomLeft,
                       colors: [
                         Colors.blue,
-                        Colors.green,     
+                        Colors.green,
                       ],
                     ).createShader(bounds);
                   },
                   child: const Icon(Icons.favorite, color: Colors.white),
                 ),
                 onPressed: () {
-                  // TODO: Add your favourite action
                 },
               ),
             ),
@@ -198,7 +195,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   child: const Icon(Icons.person, color: Colors.white),
                 ),
                 onPressed: () {
-                  // TODO: Add your profile action
                 },
               ),
             ),
@@ -206,24 +202,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ],
       ),
       floatingActionButton: Padding(
-        padding: const EdgeInsets.only(left:16.0,right: 16.0, top: 16),
+        padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 16),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Container(
               width: w * 0.7,
-              height: w/7,
+              height: w / 7,
               padding: const EdgeInsets.symmetric(horizontal: 20),
               decoration: BoxDecoration(
                 color: Colors.black,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Color(0xFFADD5CE), width: 1.0),
+                border: Border.all(color: const Color(0xFFADD5CE), width: 1.0),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black12,
                     blurRadius: 8,
-                    offset: Offset(0, 2),
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
@@ -232,72 +228,74 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 cursorWidth: 1,
                 cursorColor: Colors.white,
                 style: GoogleFonts.manrope(
-                color: Colors.white,
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
                 ),
                 decoration: InputDecoration(
-                border: InputBorder.none,
-                hintText: "Type your recipe...",
-                hintStyle: GoogleFonts.manrope(
-                  color: Colors.white.withValues(alpha: 0.7),
-                  fontSize: 15,
-                  fontWeight: FontWeight.w400,
+                  border: InputBorder.none,
+                  hintText: "Type your recipe...",
+                  hintStyle: GoogleFonts.manrope(
+                    color: Colors.white.withOpacity(0.7),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w400,
+                  ),
                 ),
-              ),
               ),
             ),
             SizedBox(
-              height: w/6*1.2,
-              width: w/6*1.2,
+              height: w / 6 * 1.2,
+              width: w / 6 * 1.2,
               child: isTyping
-              ? Padding(
-                  padding: EdgeInsets.all(0.17*w/6),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.8), width: 1), // White border
-                    ),
-                    child: CircleAvatar(
-                      backgroundColor: Colors.black,
-                      child: IconButton(
-                        icon: ShaderMask(
-                          shaderCallback: (Rect bounds) {
-                            return const LinearGradient(
-                              begin: Alignment.topRight,
-                              end: Alignment.bottomLeft,
-                              colors: [
-                                Colors.blue,
-                                Colors.green,
-                              ],
-                            ).createShader(bounds);
-                          },
-                          child: const Icon(Icons.send, color: Colors.white),
+                  ? Padding(
+                      padding: EdgeInsets.all(0.17 * w / 6),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                              color: Colors.white.withOpacity(0.8), width: 1),
                         ),
-                        onPressed: () {
-                          final prompt = _textController.text.trim();
-                          if (prompt.isNotEmpty) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => RecipeScreen(prompt: prompt),
-                              ),
-                            );
-                            _textController.clear();
-                            setState(() {
-                              isTyping = false;
-                            });
-                          }
-                        },
+                        child: CircleAvatar(
+                          backgroundColor: Colors.black,
+                          child: IconButton(
+                            icon: ShaderMask(
+                              shaderCallback: (Rect bounds) {
+                                return const LinearGradient(
+                                  begin: Alignment.topRight,
+                                  end: Alignment.bottomLeft,
+                                  colors: [
+                                    Colors.blue,
+                                    Colors.green,
+                                  ],
+                                ).createShader(bounds);
+                              },
+                              child: const Icon(Icons.send, color: Colors.white),
+                            ),
+                            onPressed: () {
+                              final prompt = _textController.text.trim();
+                              if (prompt.isNotEmpty) {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        RecipeScreen(prompt: prompt),
+                                  ),
+                                );
+                                _textController.clear();
+                                setState(() {
+                                  isTyping = false;
+                                });
+                              }
+                            },
+                          ),
+                        ),
                       ),
+                    )
+                  : VoiceButton(
+                      isListening: isListening,
+                      onTap: _onWakeDetected,
+                      size: w / 6,
                     ),
-                  ),
-                )
-              : VoiceButton(
-                  isListening: isListening,
-                  onTap: _onWakeDetected,
-                  size: w / 6,
-                ),
             )
           ],
         ),
