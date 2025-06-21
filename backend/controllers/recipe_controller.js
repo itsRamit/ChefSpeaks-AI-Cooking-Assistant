@@ -9,6 +9,8 @@ const extractBetween = (text, startTag, endTag) => {
 
 const generateRecipe = async (req, res) => {
   const { user_input } = req.body;
+  console.log('BODY:', req.body);
+
 
   if (!user_input) {
     return res.status(400).json({ error: 'User input is required' });

@@ -1,3 +1,4 @@
+import 'package:chefspeaks/services/recipe_service.dart';
 import 'package:chefspeaks/widgets/custom_text.dart';
 import 'package:chefspeaks/widgets/loader.dart';
 import 'package:chefspeaks/widgets/text_card.dart';
@@ -10,16 +11,14 @@ class RecipeScreen extends ConsumerWidget {
   final String prompt;
   const RecipeScreen({super.key, required this.prompt});
 
-  // Dummy async function to simulate fetching recipe steps
   Future<List<String>> fetchRecipeSteps() async {
-    await Future.delayed(const Duration(seconds: 5));
-    return [
-      "Step 1 : Gather all ingredients and tools needed for the recipe",
-      "Step 2 : Prepare the ingredients as described",
-      "Step 3 : Follow the instructions step by step",
-      "Step 4 : Serve and enjoy your meal!",
-    ];
+    final recipe = await RecipeService().getRecipe(prompt);
+    return List.generate(
+      recipe.steps.length,
+      (i) => 'Step ${i + 1} : ${recipe.steps[i].step}',
+    );
   }
+
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
