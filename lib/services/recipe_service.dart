@@ -9,7 +9,7 @@ class RecipeService {
 
   Future<Recipe> getRecipe(String userInput) async {
     final response = await _apiService.post(
-      baseUrl: '192.168.197.11:3000', // Use local IP if testing on device
+      baseUrl: '192.168.36.11:3000', // Use local IP if testing on device
       path: '/api/generate-recipe',
       body: {
         'user_input': userInput,
