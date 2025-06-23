@@ -8,16 +8,16 @@ const extractBetween = (text, startTag, endTag) => {
 };
 
 const generateRecipe = async (req, res) => {
-  const { user_input } = req.body;
+  const { userInput } = req.body;
   console.log('BODY:', req.body);
 
 
-  if (!user_input) {
+  if (!userInput) {
     return res.status(400).json({ error: 'User input is required' });
   }
 
   try {
-    const raw = await fetchRecipeFromLLM(user_input);
+    const raw = await fetchRecipeFromLLM(userInput);
 
     const dish_name = extractBetween(raw, '<DISH_NAME>', '</DISH_NAME>');
     const estimated_time = extractBetween(raw, '<ESTIMATED_TIME>', '</ESTIMATED_TIME>');

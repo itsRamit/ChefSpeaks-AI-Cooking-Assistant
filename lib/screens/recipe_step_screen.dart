@@ -109,15 +109,16 @@ class _RecipeStepsScreenState extends State<RecipeStepsScreen> {
   }
 
   void _goToNextPage() {
-    if (_currentPage < widget.steps.length - 1) {
+    if (_currentPage < widget.steps.length) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 400),
         curve: Curves.easeInOut,
       );
     }
   }
+
   void _goToPrevPage() {
-    if (_currentPage >= 0) {
+    if (_currentPage > 0) {
       _pageController.previousPage(
         duration: const Duration(milliseconds: 400),
         curve: Curves.easeInOut,
@@ -155,9 +156,129 @@ class _RecipeStepsScreenState extends State<RecipeStepsScreen> {
         ),
         child: PageView.builder(
           controller: _pageController,
-          itemCount: steps.length,
+          itemCount: steps.length + 1, // +1 for the final card
           physics: const NeverScrollableScrollPhysics(), // Non-scrollable
           itemBuilder: (context, index) {
+            if (index == steps.length) {
+              // Final card
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 100, horizontal: 12),
+                child: GlassmorphicContainer(
+                  width: double.infinity,
+                  height: h * 0.8,
+                  borderRadius: 25,
+                  blur: 20,
+                  alignment: Alignment.center,
+                  border: 2,
+                  linearGradient: LinearGradient(
+                    colors: [
+                      Colors.white.withOpacity(0.2),
+                      Colors.white38.withOpacity(0.1),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderGradient: LinearGradient(
+                    colors: [
+                      Colors.white24,
+                      Colors.white10,
+                    ],
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.emoji_food_beverage, color: Colors.white, size: 60),
+                        const SizedBox(height: 24),
+                        const CustomText(
+                          text: "Your dish is ready!",
+                          color: Colors.white,
+                          size: 28,
+                          bold: true,
+                          alignCenter: true,
+                        ),
+                        const SizedBox(height: 32),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            // Favourite button (timer style)
+                            GestureDetector(
+                              onTap: () {
+                                // TODO: Add to favourite logic
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 7),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.18),
+                                  borderRadius: BorderRadius.circular(30),
+                                  border: Border.all(
+                                    color: Colors.white.withOpacity(0.5),
+                                    width: 1,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.08),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.favorite_border, color: Colors.white, size: w/18),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 24),
+                            // Cook a new dish button (timer style)
+                            GestureDetector(
+                              onTap: () {
+                                Navigator.of(context).popUntil((route) => route.isFirst);
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 7),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.18),
+                                  borderRadius: BorderRadius.circular(30),
+                                  border: Border.all(
+                                    color: Colors.white.withOpacity(0.5),
+                                    width: 1,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.08),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.restart_alt, color: Colors.white, size: w/18),
+                                    SizedBox(width: 6),
+                                    CustomText(
+                                      text: "Cook Again",
+                                      color: Colors.white,
+                                      size: w/28,
+                                      bold: true,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }
+            // Regular step cards
             final step = steps[index];
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 100, horizontal: 12),
@@ -281,33 +402,34 @@ class _RecipeStepsScreenState extends State<RecipeStepsScreen> {
       floatingActionButton: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          GestureDetector(
-            onTap: _goToPrevPage,
-            child: Container(
-              height: w / 7,
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.white.withOpacity(0.8)),
-                borderRadius: BorderRadius.circular(w / 10),
-                color: Colors.black,
-              ),
-              alignment: Alignment.center,
-              child: ShaderMask(
-                shaderCallback: (Rect bounds) {
-                  return const LinearGradient(
-                    begin: Alignment.topRight,
-                    end: Alignment.bottomLeft,
-                    colors: [
-                      Colors.blue,
-                      Colors.green,
-                    ],
-                  ).createShader(bounds);
-                },
-                blendMode: BlendMode.srcIn,
-                child: const Icon(Icons.arrow_back, color: Colors.green),
+          // if (_currentPage > 0)
+            GestureDetector(
+              onTap:_currentPage > 0 ? _goToPrevPage : null,
+              child: Container(
+                height: w / 7,
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.8)),
+                  borderRadius: BorderRadius.circular(w / 10),
+                  color: _currentPage > 0 ? Colors.black : Colors.black.withValues(alpha: 0.2) 
+                ),
+                alignment: Alignment.center,
+                child: ShaderMask(
+                  shaderCallback: (Rect bounds) {
+                    return const LinearGradient(
+                      begin: Alignment.topRight,
+                      end: Alignment.bottomLeft,
+                      colors: [
+                        Colors.blue,
+                        Colors.green,
+                      ],
+                    ).createShader(bounds);
+                  },
+                  blendMode: BlendMode.srcIn,
+                  child: const Icon(Icons.arrow_back, color: Colors.green),
+                ),
               ),
             ),
-          ),
           SizedBox(
             height: w / 6 * 1.2,
             width: w / 6 * 1.2,
@@ -317,33 +439,34 @@ class _RecipeStepsScreenState extends State<RecipeStepsScreen> {
               size: w / 6,
             ),
           ),
-          GestureDetector(
-            onTap: _goToNextPage,
-            child: Container(
-              height: w / 7,
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.white.withOpacity(0.8)),
-                borderRadius: BorderRadius.circular(w / 10),
-                color: Colors.black,
-              ),
-              alignment: Alignment.center,
-              child: ShaderMask(
-                shaderCallback: (Rect bounds) {
-                  return const LinearGradient(
-                    begin: Alignment.topRight,
-                    end: Alignment.bottomLeft,
-                    colors: [
-                      Colors.blue,
-                      Colors.green,
-                    ],
-                  ).createShader(bounds);
-                },
-                blendMode: BlendMode.srcIn,
-                child: const Icon(Icons.arrow_forward, color: Colors.white),
+          // if (_currentPage < steps.length)
+            GestureDetector(
+              onTap: _currentPage < steps.length ? _goToNextPage : null,
+              child: Container(
+                height: w / 7,
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.white.withOpacity(0.8)),
+                  borderRadius: BorderRadius.circular(w / 10),
+                  color: _currentPage < steps.length ? Colors.black : Colors.black.withValues(alpha: 0.2),
+                ),
+                alignment: Alignment.center,
+                child: ShaderMask(
+                  shaderCallback: (Rect bounds) {
+                    return const LinearGradient(
+                      begin: Alignment.topRight,
+                      end: Alignment.bottomLeft,
+                      colors: [
+                        Colors.blue,
+                        Colors.green,
+                      ],
+                    ).createShader(bounds);
+                  },
+                  blendMode: BlendMode.srcIn,
+                  child: const Icon(Icons.arrow_forward, color: Colors.white),
+                ),
               ),
             ),
-          ),
         ],
       ),
     );

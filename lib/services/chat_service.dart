@@ -1,21 +1,19 @@
-
-import 'dart:convert';
-
-import 'package:chefspeaks/models/recipe_model.dart';
+import 'package:chefspeaks/models/chat_model.dart';
 import 'package:chefspeaks/services/api_service.dart';
 
-class RecipeService {
+class ChatService {
   final ApiService _apiService = ApiService();
 
-  Future<Recipe> getRecipe(String userInput) async {
+  Future<ChatMessage> chat(String userInput, String referenceText) async {
     final response = await _apiService.post(
       baseUrl: '192.168.37.11:3000',
-      path: '/api/generate-recipe',
+      path: '/api/chat',
       body: {
         'userInput': userInput,
+        'referenceText': referenceText,
       },
     );
 
-    return Recipe.fromJson(response);
+    return ChatMessage.fromJson(response);
   }
 }
