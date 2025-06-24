@@ -5,8 +5,13 @@ typedef SpeechStatusCallback = void Function(String status);
 typedef SpeechErrorCallback = void Function(dynamic error);
 
 class SpeechService {
+  static final SpeechService _instance = SpeechService._internal();
+  factory SpeechService() => _instance;
+  SpeechService._internal();
+
   final stt.SpeechToText _speech = stt.SpeechToText();
   bool _isListening = false;
+  bool _initialized = false;
 
   bool get isListening => _isListening;
 
@@ -14,16 +19,21 @@ class SpeechService {
     SpeechStatusCallback? onStatus,
     SpeechErrorCallback? onError,
   }) async {
-    return await _speech.initialize(
+    if (_initialized) return true;
+
+    final result = await _speech.initialize(
       onStatus: (status) {
-        if (onStatus != null) onStatus(status);
+        onStatus?.call(status);
         if (status == 'notListening') _isListening = false;
       },
       onError: (error) {
-        if (onError != null) onError(error);
+        onError?.call(error);
         _isListening = false;
       },
     );
+
+    _initialized = result;
+    return result;
   }
 
   void listen({
@@ -31,15 +41,17 @@ class SpeechService {
     Duration listenFor = const Duration(minutes: 1),
     Duration pauseFor = const Duration(seconds: 3),
   }) {
-    _isListening = true;
-    _speech.listen(
-      onResult: (val) => onResult(val.recognizedWords),
-      listenFor: listenFor,
-      pauseFor: pauseFor,
-    );
+    if (_speech.isAvailable) {
+      _isListening = true;
+      _speech.listen(
+        onResult: (val) => onResult(val.recognizedWords),
+        listenFor: listenFor,
+        pauseFor: pauseFor,
+      );
+    }
   }
 
-  void stop() { 
+  void stop() {
     _isListening = false;
     _speech.stop();
   }

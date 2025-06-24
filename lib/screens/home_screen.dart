@@ -18,7 +18,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-  final SpeechService _speechService = SpeechService();
+  late final SpeechService _speechService; // ✅ Changed to late
   final TextEditingController _textController = TextEditingController();
   String recognizedText = '';
   bool isTyping = false;
@@ -27,12 +27,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void initState() {
     super.initState();
+
+    _speechService = ref.read(speechServiceProvider); // ✅ Using provider
+
     final wakeupService = ref.read(wakeupServiceProvider);
     _textController.addListener(() {
       setState(() {
         isTyping = _textController.text.trim().isNotEmpty;
       });
     });
+
     wakeupService.initialize(onWakeWordDetected: _onWakeDetected);
   }
 
@@ -90,6 +94,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 log('here2');
                 final prompt = words.trim();
                 if (mounted) {
+                  ref.read(wakeupServiceProvider).dispose();
                   Navigator.push(
                     context,
                     MaterialPageRoute(

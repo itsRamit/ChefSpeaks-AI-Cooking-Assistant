@@ -1,12 +1,11 @@
-import 'package:porcupine_flutter/porcupine_manager.dart';
 import 'package:flutter/services.dart';
+import 'package:porcupine_flutter/porcupine_manager.dart';
 
 typedef WakeWordCallback = void Function();
 
 class WakeupService {
   static final WakeupService _instance = WakeupService._internal();
   factory WakeupService() => _instance;
-
   WakeupService._internal();
 
   PorcupineManager? _porcupineManager;
@@ -27,9 +26,9 @@ class WakeupService {
       await _porcupineManager?.start();
       _isInitialized = true;
       _isRunning = true;
-      print("Wake word detection started.");
+      print("[WakeupService] Wake word detection started.");
     } on PlatformException catch (e) {
-      print("Error initializing Porcupine: ${e.message}");
+      print("[WakeupService] Initialization error: ${e.message}");
     }
   }
 
@@ -37,7 +36,7 @@ class WakeupService {
     if (_porcupineManager != null && _isRunning) {
       await _porcupineManager?.stop();
       _isRunning = false;
-      print("Wake word detection paused.");
+      print("[WakeupService] Detection paused.");
     }
   }
 
@@ -45,7 +44,7 @@ class WakeupService {
     if (_porcupineManager != null && !_isRunning) {
       await _porcupineManager?.start();
       _isRunning = true;
-      print("Wake word detection resumed.");
+      print("[WakeupService] Detection resumed.");
     }
   }
 
@@ -53,14 +52,15 @@ class WakeupService {
     if (_porcupineManager != null && _isRunning) {
       await _porcupineManager?.stop();
       _isRunning = false;
-      print("Wake word detection stopped.");
+      print("[WakeupService] Detection stopped.");
     }
   }
 
   Future<void> dispose() async {
     await stop();
     await _porcupineManager?.delete();
+    _porcupineManager = null;
     _isInitialized = false;
-    print("Wake word detection disposed.");
+    print("[WakeupService] Detection disposed.");
   }
 }
