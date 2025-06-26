@@ -1,6 +1,6 @@
 import 'dart:async';
+import 'package:chefspeaks/providers/voice_handler_provider.dart';
 import 'package:chefspeaks/services/chat_service.dart';
-import 'package:chefspeaks/services/stt_services.dart';
 import 'package:chefspeaks/widgets/voice_button.dart';
 import 'package:flutter/material.dart';
 import 'package:glassmorphism/glassmorphism.dart';
@@ -8,7 +8,6 @@ import '../models/recipe_model.dart';
 import '../widgets/custom_text.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:chefspeaks/providers/wakeup_service_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 class RecipeStepsScreen extends ConsumerStatefulWidget {
   final Recipe recipe;
@@ -27,16 +26,9 @@ class _RecipeStepsScreenState extends ConsumerState<RecipeStepsScreen> {
   Timer? _timer;
   bool _isPaused = false;
 
-  late final SpeechService _speechService;
-  Timer? _debounceTimer;
-  String recognizedText = '';
-
   @override
   void initState() {
     super.initState();
-
-    _speechService = ref.read(speechServiceProvider);
-
     _pageController = PageController(viewportFraction: 0.85);
     _pageController.addListener(() {
       final page = _pageController.page?.round() ?? 0;
@@ -47,98 +39,51 @@ class _RecipeStepsScreenState extends ConsumerState<RecipeStepsScreen> {
       }
     });
 
-    final wakeupService = ref.read(wakeupServiceProvider);
-    wakeupService.initialize(onWakeWordDetected: _onWakeDetected);
+    ref.read(wakeupServiceProvider).initialize(
+      onWakeWordDetected: () {
+        ref.read(voiceHandlerProvider).handleWakeAndListen();
+      },
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    Future.microtask(() {
+      ref.read(activeScreenProvider.notifier).state = 'recipeSteps';
+      ref.read(screenCallbackProvider.notifier).state = (String text) async {
+        final userInput = text.trim();
+        if (userInput.isEmpty) return;
+
+        final stepIndex = _currentPage.clamp(0, widget.recipe.steps.length - 1);
+        final step = widget.recipe.steps[stepIndex];
+        final referenceText =
+            '${widget.recipe.dishName}\nStep: ${step.step}\nDescription: ${step.description}';
+
+        try {
+          final response = await ChatService().chat(userInput, referenceText);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(response.response)),
+            );
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text("Error: $e")),
+            );
+          }
+        }
+      };
+    });
   }
 
   @override
   void dispose() {
     _timer?.cancel();
-    _debounceTimer?.cancel();
     _pageController.dispose();
     super.dispose();
-  }
-
-  void _onWakeDetected() async {
-    final wakeupService = ref.read(wakeupServiceProvider);
-    await wakeupService.pause();
-    await _listen();
-  }
-
-  Future<void> _listen() async {
-    var status = await Permission.microphone.request();
-    if (!status.isGranted) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Microphone permission is required')),
-        );
-      }
-      return;
-    }
-
-    if (!ref.read(isListeningProvider)) {
-      final wakeupService = ref.read(wakeupServiceProvider);
-
-      bool available = await _speechService.initialize(
-        onStatus: (status) async {
-          if (status == 'notListening') {
-            ref.read(isListeningProvider.notifier).state = false;
-            await wakeupService.resume();
-          }
-        },
-        onError: (error) {
-          ref.read(isListeningProvider.notifier).state = false;
-        },
-      );
-
-      if (available) {
-        ref.read(isListeningProvider.notifier).state = true;
-        setState(() {
-          recognizedText = '';
-        });
-
-        _speechService.listen(
-          onResult: (words) async {
-            setState(() {
-              recognizedText = words;
-            });
-            _debounceTimer?.cancel();
-            _debounceTimer = Timer(const Duration(seconds: 1), () async {
-              if (words.trim().isNotEmpty) {
-                var userInput = words.trim();
-                final chatService = ChatService();
-                try {
-                  final stepIndex = _currentPage.clamp(0, widget.recipe.steps.length - 1);
-                  final step = widget.recipe.steps[stepIndex];
-                  final referenceText =
-                      '${widget.recipe.dishName}\nStep: ${step.step}\nDescription: ${step.description}';
-
-                  final chatMessage = await chatService.chat(
-                    userInput,
-                    referenceText,
-                  );
-
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(chatMessage.response)),
-                    );
-                  }
-                } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Error: \$e')),
-                    );
-                  }
-                }
-              }
-            });
-          },
-        );
-      }
-    } else {
-      ref.read(isListeningProvider.notifier).state = false;
-      _speechService.stop();
-    }
   }
 
   void _startTimer(int index, int minutes) {
@@ -271,7 +216,9 @@ class _RecipeStepsScreenState extends ConsumerState<RecipeStepsScreen> {
             width: w / 6 * 1.2,
             child: VoiceButton(
               isListening: ref.watch(isListeningProvider),
-              onTap: _listen,
+              onTap: () {
+                ref.read(voiceHandlerProvider).handleWakeAndListen();
+              },
               size: w / 6,
             ),
           ),

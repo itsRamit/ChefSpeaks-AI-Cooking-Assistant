@@ -1,14 +1,11 @@
-import 'dart:async';
-import 'dart:developer';
+import 'package:chefspeaks/providers/voice_handler_provider.dart';
 import 'package:chefspeaks/providers/wakeup_service_provider.dart';
 import 'package:chefspeaks/screens/recipe_screen.dart';
-import 'package:chefspeaks/services/stt_services.dart';
 import 'package:chefspeaks/widgets/custom_text.dart';
 import 'package:chefspeaks/widgets/voice_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -18,99 +15,57 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-  late final SpeechService _speechService; // ✅ Changed to late
   final TextEditingController _textController = TextEditingController();
   String recognizedText = '';
   bool isTyping = false;
-  Timer? _debounceTimer;
 
   @override
   void initState() {
     super.initState();
 
-    _speechService = ref.read(speechServiceProvider); // ✅ Using provider
-
-    final wakeupService = ref.read(wakeupServiceProvider);
     _textController.addListener(() {
       setState(() {
         isTyping = _textController.text.trim().isNotEmpty;
       });
     });
 
-    wakeupService.initialize(onWakeWordDetected: _onWakeDetected);
+    ref.read(wakeupServiceProvider).initialize(
+      onWakeWordDetected: () {
+        ref.read(voiceHandlerProvider).handleWakeAndListen();
+      },
+    );
   }
 
-  void _onWakeDetected() async {
-    final wakeupService = ref.read(wakeupServiceProvider);
-    await wakeupService.pause();
-    await _listen();
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    ref.read(activeScreenProvider.notifier).state = 'home';
+
+    Future.microtask((){
+      ref.read(screenCallbackProvider.notifier).state = (String text) {
+      if (mounted) {
+        setState(() {
+          recognizedText = text;
+        });
+
+        ref.read(wakeupServiceProvider).dispose();
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => RecipeScreen(prompt: text),
+          ),
+        );
+      }
+    };
+    });
   }
 
   @override
   void dispose() {
     _textController.dispose();
     super.dispose();
-  }
-
-  Future<void> _listen() async {
-    var status = await Permission.microphone.request();
-    if (!status.isGranted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Microphone permission is required')),
-      );
-      return;
-    }
-
-    if (!ref.read(isListeningProvider)) {
-      bool available = await _speechService.initialize(
-        onStatus: (status) async {
-          if (status == 'notListening') {
-            ref.read(isListeningProvider.notifier).state = false;
-            final wakeupService = ref.read(wakeupServiceProvider);
-            await wakeupService.resume();
-            log('here1');
-          }
-        },
-        onError: (error) {
-          log(error.toString());
-          ref.read(isListeningProvider.notifier).state = false;
-        },
-      );
-
-      if (available) {
-        ref.read(isListeningProvider.notifier).state = true;
-        setState(() {
-          recognizedText = '';
-        });
-
-        _speechService.listen(
-          onResult: (words) async {
-            setState(() {
-              recognizedText = words;
-            });
-            _debounceTimer?.cancel();
-            _debounceTimer = Timer(const Duration(seconds: 1), () async {
-              if (words.trim().isNotEmpty) {
-                log('here2');
-                final prompt = words.trim();
-                if (mounted) {
-                  ref.read(wakeupServiceProvider).dispose();
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => RecipeScreen(prompt: prompt),
-                    ),
-                  );
-                }
-              }
-            });
-          },
-        );
-      }
-    } else {
-      ref.read(isListeningProvider.notifier).state = false;
-      _speechService.stop();
-    }
   }
 
   @override
@@ -174,8 +129,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   },
                   child: const Icon(Icons.favorite, color: Colors.white),
                 ),
-                onPressed: () {
-                },
+                onPressed: () {},
               ),
             ),
           ),
@@ -199,8 +153,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   },
                   child: const Icon(Icons.person, color: Colors.white),
                 ),
-                onPressed: () {
-                },
+                onPressed: () {},
               ),
             ),
           ),
@@ -298,7 +251,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     )
                   : VoiceButton(
                       isListening: isListening,
-                      onTap: _onWakeDetected,
+                      onTap: () {
+                        ref.read(voiceHandlerProvider).handleWakeAndListen();
+                      },
                       size: w / 6,
                     ),
             )

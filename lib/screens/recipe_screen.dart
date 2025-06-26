@@ -1,4 +1,9 @@
+import 'dart:async';
+import 'dart:developer';
 import 'package:chefspeaks/models/recipe_model.dart';
+import 'package:chefspeaks/providers/voice_handler_provider.dart';
+import 'package:chefspeaks/providers/wakeup_service_provider.dart';
+import 'package:chefspeaks/providers/wakeup_service_provider.dart';
 import 'package:chefspeaks/screens/recipe_step_screen.dart';
 import 'package:chefspeaks/services/recipe_service.dart';
 import 'package:chefspeaks/widgets/custom_text.dart';
@@ -7,7 +12,6 @@ import 'package:chefspeaks/widgets/text_card.dart';
 import 'package:chefspeaks/widgets/voice_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:chefspeaks/providers/wakeup_service_provider.dart';
 
 class RecipeScreen extends ConsumerStatefulWidget {
   final String prompt;
@@ -23,7 +27,34 @@ class _RecipeScreenState extends ConsumerState<RecipeScreen> {
   @override
   void initState() {
     super.initState();
+
+    // Start wakeup service (triggers voiceHandler)
+    ref.read(wakeupServiceProvider).initialize(
+      onWakeWordDetected: () {
+        ref.read(voiceHandlerProvider).handleWakeAndListen();
+      },
+    );
+
     _recipeFuture = RecipeService().getRecipe(widget.prompt);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    Future.microtask(() {
+      ref.read(activeScreenProvider.notifier).state = 'recipe';
+
+      ref.read(screenCallbackProvider.notifier).state = (String text) {
+        log("text: $text");
+      };
+    });
+  }
+
+  @override
+  void dispose() {
+    ref.read(wakeupServiceProvider).pause();
+    super.dispose();
   }
 
   @override
@@ -119,7 +150,9 @@ class _RecipeScreenState extends ConsumerState<RecipeScreen> {
                 width: w / 6 * 1.2,
                 child: VoiceButton(
                   isListening: isListening,
-                  onTap: () {},
+                  onTap: () {
+                    ref.read(voiceHandlerProvider).handleWakeAndListen();
+                  },
                   size: w / 6,
                 ),
               ),
@@ -169,7 +202,6 @@ class _RecipeScreenState extends ConsumerState<RecipeScreen> {
     );
   }
 }
-
 
 class _AnimatedTextCard extends StatefulWidget {
   final String text;
