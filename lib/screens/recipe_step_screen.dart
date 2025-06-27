@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:chefspeaks/providers/voice_handler_provider.dart';
 import 'package:chefspeaks/services/chat_service.dart';
 import 'package:chefspeaks/widgets/voice_button.dart';
+import 'package:chefspeaks/widgets/voice_hint_bubble.dart';
 import 'package:flutter/material.dart';
 import 'package:glassmorphism/glassmorphism.dart';
 import '../models/recipe_model.dart';
@@ -207,22 +209,63 @@ class _RecipeStepsScreenState extends ConsumerState<RecipeStepsScreen> {
           },
         ),
       ),
-      floatingActionButton: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.centerLeft,
         children: [
-          _buildNavButton(Icons.arrow_back, _goToPrevPage, _currentPage > 0, w),
-          SizedBox(
-            height: w / 6 * 1.2,
-            width: w / 6 * 1.2,
-            child: VoiceButton(
-              isListening: ref.watch(isListeningProvider),
-              onTap: () {
-                ref.read(voiceHandlerProvider).handleWakeAndListen();
-              },
-              size: w / 6,
+          Positioned(
+            left: w/7,
+            bottom: w/6*1.3,
+            child: VoiceHintBubble(
+              message: 'Say "Hey chef" then \n "Next" or "Previous" \n to navigate',
+              showDuration: Duration(seconds: 5),
+              triangleLeftOffset: 0,
             ),
           ),
-          _buildNavButton(Icons.arrow_forward, _goToNextPage, _currentPage < steps.length, w),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(w / 10),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: w * 0.04, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.18),
+                  borderRadius: BorderRadius.circular(w / 10),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.3),
+                    width: 1.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 20,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _buildNavButton(Icons.arrow_back, _goToPrevPage, _currentPage > 0, w),
+                    SizedBox(
+                      height: w / 6 * 1.2,
+                      width: w / 6 * 1.2,
+                      child: VoiceButton(
+                        isListening: ref.watch(isListeningProvider),
+                        onTap: () {
+                          ref.read(voiceHandlerProvider).handleWakeAndListen();
+                        },
+                        size: w / 6,
+                      ),
+                    ),
+                    _buildNavButton(Icons.arrow_forward, _goToNextPage, _currentPage < steps.length, w),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -292,30 +335,61 @@ class _RecipeStepsScreenState extends ConsumerState<RecipeStepsScreen> {
               ),
               const SizedBox(height: 32),
               Row(
+                spacing: w/10,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.favorite_border, color: Colors.white),
-                    onPressed: () {},
-                  ),
-                  const SizedBox(width: 24),
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white.withAlpha(46),
-                      shape: RoundedRectangleBorder(
+                  GestureDetector(
+                    onTap: () {
+                      // TODO: Add to favourite logic
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 7),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withAlpha(46),
                         borderRadius: BorderRadius.circular(30),
-                        side: BorderSide(color: Colors.white.withAlpha(127)),
+                        border: Border.all(color: Colors.white.withAlpha(127)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withAlpha(20),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
+                      child: Icon(Icons.favorite_border, color: Colors.white),
                     ),
-                    onPressed: () {
+                  ),
+                  GestureDetector(
+                    onTap: () {
                       Navigator.of(context).popUntil((route) => route.isFirst);
                     },
-                    icon: const Icon(Icons.restart_alt, color: Colors.white),
-                    label: const CustomText(
-                      text: "Cook Again",
-                      color: Colors.white,
-                      size: 14,
-                      bold: true,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 7),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withAlpha(46),
+                        borderRadius: BorderRadius.circular(30),
+                        border: Border.all(color: Colors.white.withAlpha(127)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withAlpha(20),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        spacing: 6,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.restart_alt, color: Colors.white),
+                          CustomText(
+                            text: "Cook Again",
+                            color: Colors.white,
+                            size: w/30,
+                            bold: true,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],

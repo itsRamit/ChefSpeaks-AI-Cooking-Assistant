@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:developer';
+import 'dart:ui' show ImageFilter;
 import 'package:chefspeaks/models/recipe_model.dart';
 import 'package:chefspeaks/providers/voice_handler_provider.dart';
 import 'package:chefspeaks/providers/wakeup_service_provider.dart';
@@ -10,6 +11,7 @@ import 'package:chefspeaks/widgets/custom_text.dart';
 import 'package:chefspeaks/widgets/loader.dart';
 import 'package:chefspeaks/widgets/text_card.dart';
 import 'package:chefspeaks/widgets/voice_button.dart';
+import 'package:chefspeaks/widgets/voice_hint_bubble.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -122,12 +124,16 @@ class _RecipeScreenState extends ConsumerState<RecipeScreen> {
                       );
 
                       return ListView.builder(
-                        itemCount: steps.length,
+                        itemCount: steps.length + 1,
                         itemBuilder: (context, index) {
-                          return _AnimatedTextCard(
-                            text: steps[index],
-                            delay: Duration(milliseconds: 300 * index),
-                          );
+                          if (index < steps.length) {
+                            return _AnimatedTextCard(
+                              text: steps[index],
+                              delay: Duration(milliseconds: 300 * index),
+                            );
+                          } else {
+                            return const SizedBox(height: 60); 
+                          }
                         },
                       );
                     },
@@ -141,54 +147,97 @@ class _RecipeScreenState extends ConsumerState<RecipeScreen> {
       floatingActionButton: FutureBuilder<Recipe>(
         future: _recipeFuture,
         builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const SizedBox.shrink();
+          }
           final recipe = snapshot.data;
-          return Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          return Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.centerLeft,
             children: [
-              SizedBox(
-                height: w / 6 * 1.2,
-                width: w / 6 * 1.2,
-                child: VoiceButton(
-                  isListening: isListening,
-                  onTap: () {
-                    ref.read(voiceHandlerProvider).handleWakeAndListen();
-                  },
-                  size: w / 6,
+              Positioned(
+                left: -25,
+                bottom: w/6*1.3,
+                child: VoiceHintBubble(
+                  message: 'Say "Hey chef" then \n "Continue" to navigate',
+                  showDuration: Duration(seconds: 500),
+                  triangleLeftOffset: 0,
                 ),
               ),
-              GestureDetector(
-                onTap: recipe == null
-                    ? null
-                    : () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => RecipeStepsScreen(recipe: recipe),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(w / 10),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                  child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: w * 0.04, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(w / 10),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.3),
+                          width: 1.5,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 20,
+                            offset: const Offset(0, 2),
                           ),
-                        );
-                      },
-                child: Container(
-                  height: w / 7,
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.white.withOpacity(0.8)),
-                    borderRadius: BorderRadius.circular(w / 10),
-                    color: Colors.black,
-                  ),
-                  alignment: Alignment.center,
-                  child: ShaderMask(
-                    shaderCallback: (Rect bounds) {
-                      return const LinearGradient(
-                        begin: Alignment.topRight,
-                        end: Alignment.bottomLeft,
-                        colors: [Colors.blue, Colors.green],
-                      ).createShader(bounds);
-                    },
-                    blendMode: BlendMode.srcIn,
-                    child: const CustomText(
-                      text: "Continue",
-                      color: Colors.white,
-                      size: 16,
+                        ],
+                      ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          height: w / 6 * 1.2,
+                          width: w / 6 * 1.2,
+                          child: VoiceButton(
+                            isListening: isListening,
+                            onTap: () {
+                              ref.read(voiceHandlerProvider).handleWakeAndListen();
+                            },
+                            size: w / 6,
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: recipe == null
+                              ? null
+                              : () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => RecipeStepsScreen(recipe: recipe),
+                                    ),
+                                  );
+                                },
+                          child: Container(
+                            height: w / 7,
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.white.withOpacity(0.8)),
+                              borderRadius: BorderRadius.circular(w / 10),
+                              color: Colors.black,
+                            ),
+                            alignment: Alignment.center,
+                            child: ShaderMask(
+                              shaderCallback: (Rect bounds) {
+                                return const LinearGradient(
+                                  begin: Alignment.topRight,
+                                  end: Alignment.bottomLeft,
+                                  colors: [Colors.blue, Colors.green],
+                                ).createShader(bounds);
+                              },
+                              blendMode: BlendMode.srcIn,
+                              child: const CustomText(
+                                text: "Continue",
+                                color: Colors.white,
+                                size: 16,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
