@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:developer';
 
 import 'package:chefspeaks/providers/wakeup_service_provider.dart';
+import 'package:chefspeaks/services/tts_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -12,6 +13,13 @@ final screenCallbackProvider = StateProvider<VoiceCallback?>((ref) => null);
 
 final voiceHandlerProvider = Provider<VoiceHandler>((ref) {
   return VoiceHandler(ref);
+});
+
+final ttsServiceProvider = Provider<TTSService>((ref) {
+  final tts = TTSService();
+  tts.init();
+  ref.onDispose(() => tts.dispose());
+  return tts;
 });
 
 class VoiceHandler {
@@ -49,7 +57,8 @@ class VoiceHandler {
     if (!success) return;
 
     ref.read(isListeningProvider.notifier).state = true;
-
+    final tts = ref.read(ttsServiceProvider);
+    tts.stop();
     sttService.listen(onResult: (words) async {
       final text = words.trim();
       if (text.isEmpty) return;

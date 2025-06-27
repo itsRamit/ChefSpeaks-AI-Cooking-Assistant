@@ -4,7 +4,6 @@ import 'dart:ui' show ImageFilter;
 import 'package:chefspeaks/models/recipe_model.dart';
 import 'package:chefspeaks/providers/voice_handler_provider.dart';
 import 'package:chefspeaks/providers/wakeup_service_provider.dart';
-import 'package:chefspeaks/providers/wakeup_service_provider.dart';
 import 'package:chefspeaks/screens/recipe_step_screen.dart';
 import 'package:chefspeaks/services/recipe_service.dart';
 import 'package:chefspeaks/widgets/custom_text.dart';
@@ -25,7 +24,7 @@ class RecipeScreen extends ConsumerStatefulWidget {
 
 class _RecipeScreenState extends ConsumerState<RecipeScreen> {
   late Future<Recipe> _recipeFuture;
-
+  bool spoken = false;
   @override
   void initState() {
     super.initState();
@@ -118,6 +117,19 @@ class _RecipeScreenState extends ConsumerState<RecipeScreen> {
                       }
 
                       final recipe = snapshot.data!;
+                      String completeSteps = "Here are the steps to cook your dish:\n";
+                      for (int i = 0; i < recipe.steps.length; i++) {
+                        completeSteps += "Step ${i + 1}: ${recipe.steps[i].step}\n";
+                      }
+                      if (!spoken) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          final tts = ref.read(ttsServiceProvider);
+                          tts.speak(completeSteps);
+                          setState(() {
+                            spoken = true;
+                          });
+                        });
+                      }
                       final steps = List.generate(
                         recipe.steps.length,
                         (i) => 'Step ${i + 1} : ${recipe.steps[i].step}',
@@ -160,7 +172,7 @@ class _RecipeScreenState extends ConsumerState<RecipeScreen> {
                 bottom: w/6*1.3,
                 child: VoiceHintBubble(
                   message: 'Say "Hey chef" then \n "Continue" to navigate',
-                  showDuration: Duration(seconds: 500),
+                  showDuration: Duration(seconds: 5),
                   triangleLeftOffset: 0,
                 ),
               ),
@@ -204,6 +216,8 @@ class _RecipeScreenState extends ConsumerState<RecipeScreen> {
                           onTap: recipe == null
                               ? null
                               : () {
+                                  final tts = ref.read(ttsServiceProvider);
+                                  tts.stop();
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(

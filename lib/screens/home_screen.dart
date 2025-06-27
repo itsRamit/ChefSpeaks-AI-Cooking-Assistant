@@ -37,6 +37,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ref.read(voiceHandlerProvider).handleWakeAndListen();
       },
     );
+    final tts = ref.read(ttsServiceProvider);
+    tts.speak("Hey Ramit, I'm your personal chef. How can I assist you today?");
   }
 
   @override

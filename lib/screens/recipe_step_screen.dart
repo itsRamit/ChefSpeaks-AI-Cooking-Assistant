@@ -27,10 +27,16 @@ class _RecipeStepsScreenState extends ConsumerState<RecipeStepsScreen> {
   int _initialSeconds = 0;
   Timer? _timer;
   bool _isPaused = false;
+  List<bool> spoken = [];
 
   @override
   void initState() {
     super.initState();
+    spoken = List<bool>.filled(widget.recipe.steps.length, false);
+    spoken[0] = true;
+    final tts = ref.read(ttsServiceProvider);
+    final firstStep = widget.recipe.steps[0];
+    tts.speak(' ${firstStep.description}');
     _pageController = PageController(viewportFraction: 0.85);
     _pageController.addListener(() {
       final page = _pageController.page?.round() ?? 0;
@@ -64,11 +70,10 @@ class _RecipeStepsScreenState extends ConsumerState<RecipeStepsScreen> {
             '${widget.recipe.dishName}\nStep: ${step.step}\nDescription: ${step.description}';
 
         try {
-          final response = await ChatService().chat(userInput, referenceText);
+          final msg = await ChatService().chat(userInput, referenceText);
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(response.response)),
-            );
+            final tts = ref.read(ttsServiceProvider);
+            tts.speak(msg.response);
           }
         } catch (e) {
           if (mounted) {
@@ -154,16 +159,28 @@ class _RecipeStepsScreenState extends ConsumerState<RecipeStepsScreen> {
   }
 
   void _goToNextPage() {
+    final tts = ref.read(ttsServiceProvider);
     if (_currentPage < widget.recipe.steps.length) {
+       tts.stop();
       _pageController.nextPage(
         duration: const Duration(milliseconds: 400),
         curve: Curves.easeInOut,
       );
+    };
+    final nextIndex = (_currentPage + 1).clamp(0, widget.recipe.steps.length - 1);
+    final step = widget.recipe.steps[nextIndex];
+    if(!spoken[nextIndex]){
+      tts.speak(' ${step.description}');
+      setState(() {
+        spoken[nextIndex] = true;
+      });
     }
   }
 
   void _goToPrevPage() {
     if (_currentPage > 0) {
+      final tts = ref.read(ttsServiceProvider);
+      tts.stop();
       _pageController.previousPage(
         duration: const Duration(milliseconds: 400),
         curve: Curves.easeInOut,
