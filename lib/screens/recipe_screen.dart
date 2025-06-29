@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:developer';
 import 'dart:ui' show ImageFilter;
+import 'package:chefspeaks/main.dart';
 import 'package:chefspeaks/models/recipe_model.dart';
 import 'package:chefspeaks/providers/voice_handler_provider.dart';
 import 'package:chefspeaks/providers/wakeup_service_provider.dart';
@@ -23,7 +24,7 @@ class RecipeScreen extends ConsumerStatefulWidget {
   ConsumerState<RecipeScreen> createState() => _RecipeScreenState();
 }
 
-class _RecipeScreenState extends ConsumerState<RecipeScreen> {
+class _RecipeScreenState extends ConsumerState<RecipeScreen> with RouteAware {
   late Future<Recipe> _recipeFuture;
   Recipe? _loadedRecipe;
   bool spoken = false;
@@ -37,6 +38,8 @@ class _RecipeScreenState extends ConsumerState<RecipeScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    routeObserver.subscribe(this, ModalRoute.of(context)!);
+
     Future.microtask(() {
       
       ref.read(activeScreenProvider.notifier).state = 'recipe';
@@ -67,8 +70,19 @@ class _RecipeScreenState extends ConsumerState<RecipeScreen> {
 
   @override
   void dispose() {
+    routeObserver.unsubscribe(this);
     ref.read(wakeupServiceProvider).pause();
     super.dispose();
+  }
+
+  @override
+  void didPopNext() {
+    // Called when coming back to this screen
+    ref.read(wakeupServiceProvider).initialize(
+      onWakeWordDetected: () {
+        ref.read(voiceHandlerProvider).handleWakeAndListen();
+      },
+    );
   }
 
   @override
