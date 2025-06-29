@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class VoiceHintBubble extends StatefulWidget {
   final String message;
@@ -49,7 +50,10 @@ class _VoiceHintBubbleState extends State<VoiceHintBubble> with SingleTickerProv
       return [
         TextSpan(
           text: message,
-          style: const TextStyle(color: Colors.white, fontSize: 14),
+          style: GoogleFonts.manrope(
+            color: Colors.white,
+            fontSize: 14,
+          ),
         ),
       ];
     }
@@ -67,7 +71,10 @@ class _VoiceHintBubbleState extends State<VoiceHintBubble> with SingleTickerProv
         }
         spans.add(TextSpan(
           text: before,
-          style: const TextStyle(color: Colors.white, fontSize: 14),
+          style: GoogleFonts.manrope(
+            color: Colors.white,
+            fontSize: 14,
+          ),
         ));
       }
       // Add the highlighted word (without quotes and without trailing comma)
@@ -89,7 +96,7 @@ class _VoiceHintBubbleState extends State<VoiceHintBubble> with SingleTickerProv
               ),
               child: Text(
                 highlighted,
-                style: const TextStyle(
+                style: GoogleFonts.manrope(
                   fontWeight: FontWeight.bold,
                   color: Colors.white, // This will be masked by the gradient
                   fontSize: 14,
@@ -109,7 +116,10 @@ class _VoiceHintBubbleState extends State<VoiceHintBubble> with SingleTickerProv
     if (lastEnd < message.length) {
       spans.add(TextSpan(
         text: message.substring(lastEnd),
-        style: const TextStyle(color: Colors.white, fontSize: 14),
+        style: GoogleFonts.manrope(
+          color: Colors.white,
+          fontSize: 14,
+        ),
       ));
     }
     return spans;
