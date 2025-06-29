@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer';
 import 'dart:ui';
 import 'package:chefspeaks/providers/voice_handler_provider.dart';
 import 'package:chefspeaks/services/chat_service.dart';
@@ -46,26 +47,59 @@ class _RecipeStepsScreenState extends ConsumerState<RecipeStepsScreen> {
         });
       }
     });
-
-    ref.read(wakeupServiceProvider).initialize(
-      onWakeWordDetected: () {
-        ref.read(voiceHandlerProvider).handleWakeAndListen();
-      },
-    );
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-
     Future.microtask(() {
+      log("Here in didChangeDependencies");
       ref.read(activeScreenProvider.notifier).state = 'recipeSteps';
+      ref.read(wakeupServiceProvider).initialize(
+        onWakeWordDetected: () {
+          log("Wake word detected, handling wake and listen");
+          ref.read(voiceHandlerProvider).handleWakeAndListen();
+        },
+      );
+      log("Here in didChangeDependencies after initialization");
       ref.read(screenCallbackProvider.notifier).state = (String text) async {
         final userInput = text.trim();
         if (userInput.isEmpty) return;
 
+        if (userInput.contains('next')) {
+          _goToNextPage();
+          return;
+        }
+        if (userInput.contains('previous') || userInput.contains('back')) {
+          _goToPrevPage();
+          return;
+        }
+
         final stepIndex = _currentPage.clamp(0, widget.recipe.steps.length - 1);
         final step = widget.recipe.steps[stepIndex];
+        if (step.time > 0) {
+          final tts = ref.read(ttsServiceProvider);
+          if (userInput.contains('start timer')) {
+            _startTimer(stepIndex, step.time);
+            tts.speak("Timer started");
+            return;
+          }
+          if (userInput.contains('pause timer')) {
+            _pauseTimer();
+            tts.speak("Timer paused");
+            return;
+          }
+          if (userInput.contains('resume timer')) {
+            _resumeTimer();
+            tts.speak("Timer resumed");
+            return;
+          }
+          if (userInput.contains('reset timer')) {
+            _resetTimer(stepIndex, step.time);
+            tts.speak("Timer reset");
+            return;
+          }
+        }
         final referenceText =
             '${widget.recipe.dishName}\nStep: ${step.step}\nDescription: ${step.description}';
 
@@ -115,6 +149,8 @@ class _RecipeStepsScreenState extends ConsumerState<RecipeStepsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Timer finished!')),
         );
+        final tts = ref.read(ttsServiceProvider);
+        tts.speak("Timer finished for step ${index + 1}");
       }
     });
   }
@@ -206,25 +242,39 @@ class _RecipeStepsScreenState extends ConsumerState<RecipeStepsScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topRight,
-            end: Alignment.bottomLeft,
-            colors: [Colors.blue, Colors.green],
+      body: Stack(
+        children: [
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topRight,
+                end: Alignment.bottomLeft,
+                colors: [Colors.blue, Colors.green],
+              ),
+            ),
           ),
-        ),
-        child: PageView.builder(
-          controller: _pageController,
-          itemCount: steps.length + 1,
-          physics: const NeverScrollableScrollPhysics(),
-          itemBuilder: (context, index) {
-            if (index == steps.length) {
-              return _buildFinalCard(h, w);
-            }
-            return _buildStepCard(h, w, index);
-          },
-        ),
+          // Background image with opacity
+          Positioned.fill(
+            child: Opacity(
+              opacity: 0.3,
+              child: Image.asset(
+                'assets/bg.png', // Make sure this path is correct and bg.png is in your assets
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+          PageView.builder(
+            controller: _pageController,
+            itemCount: steps.length + 1,
+            physics: const NeverScrollableScrollPhysics(),
+            itemBuilder: (context, index) {
+              if (index == steps.length) {
+                return _buildFinalCard(h, w);
+              }
+              return _buildStepCard(h, w, index);
+            },
+          ),
+        ],
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: Stack(

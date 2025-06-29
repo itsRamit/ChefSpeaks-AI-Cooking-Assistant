@@ -13,6 +13,7 @@ import 'package:chefspeaks/widgets/voice_button.dart';
 import 'package:chefspeaks/widgets/voice_hint_bubble.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:glassmorphism/glassmorphism.dart';
 
 class RecipeScreen extends ConsumerStatefulWidget {
   final String prompt;
@@ -24,17 +25,11 @@ class RecipeScreen extends ConsumerStatefulWidget {
 
 class _RecipeScreenState extends ConsumerState<RecipeScreen> {
   late Future<Recipe> _recipeFuture;
+  Recipe? _loadedRecipe;
   bool spoken = false;
   @override
   void initState() {
     super.initState();
-
-    // Start wakeup service (triggers voiceHandler)
-    ref.read(wakeupServiceProvider).initialize(
-      onWakeWordDetected: () {
-        ref.read(voiceHandlerProvider).handleWakeAndListen();
-      },
-    );
 
     _recipeFuture = RecipeService().getRecipe(widget.prompt);
   }
@@ -42,12 +37,30 @@ class _RecipeScreenState extends ConsumerState<RecipeScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-
     Future.microtask(() {
+      
       ref.read(activeScreenProvider.notifier).state = 'recipe';
-
-      ref.read(screenCallbackProvider.notifier).state = (String text) {
+      ref.read(wakeupServiceProvider).initialize(
+        onWakeWordDetected: () {
+          
+          ref.read(voiceHandlerProvider).handleWakeAndListen();
+        },
+      );
+      ref.read(screenCallbackProvider.notifier).state = (String text) async  {
         log("text: $text");
+        if(text.toLowerCase().contains('continue')){
+          final tts = ref.read(ttsServiceProvider);
+          tts.stop();
+          await ref.read(wakeupServiceProvider).dispose();
+          Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => RecipeStepsScreen(recipe: _loadedRecipe!),
+              ),
+            );
+        } else {
+          log("Unrecognized command: $text");
+        }
       };
     });
   }
@@ -65,96 +78,148 @@ class _RecipeScreenState extends ConsumerState<RecipeScreen> {
     final isListening = ref.watch(isListeningProvider);
 
     return Scaffold(
-      body: Container(
-        height: h,
-        width: w,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topRight,
-            end: Alignment.bottomLeft,
-            colors: [Colors.blueAccent, Colors.green],
+      body: Stack(
+        children: [
+          Container(
+            height: h,
+            width: w,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topRight,
+                end: Alignment.bottomLeft,
+                colors: [
+                  Colors.blue,
+                  Colors.green,
+                ],
+              ),
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              Expanded(
-                flex: 1,
-                child: Container(
-                  width: double.infinity,
-                  margin: const EdgeInsets.all(8),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(32),
-                    border: Border.all(color: Colors.white.withOpacity(0.2)),
-                  ),
-                  child: CustomText(
-                    text: "Prompt : ${widget.prompt}",
-                    color: Colors.white,
+          
+          Positioned.fill(
+            child: Opacity(
+              opacity: 0.3,
+              child: Image.asset(
+                'assets/bg.png', // Make sure this path is correct and bg.png is in your assets
+                fit: BoxFit.cover,
+                
+              ),
+            ),
+          ),
+          SafeArea(
+            child: Column(
+              children: [
+                Expanded(
+                  flex: 1,
+                  child: GlassmorphicContainer(
+                    margin: EdgeInsets.all(8),
+                    width: double.infinity,
+                    height: h * 0.8,
+                    borderRadius: 25,
+                    blur: 16,
+                    // alignment: Alignment.center,
+                    border: 1.5,
+                    linearGradient: LinearGradient(
+                      colors: [
+                        Colors.white.withAlpha(51),
+                        Colors.white38.withAlpha(26),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderGradient: LinearGradient(
+                      colors: [Colors.white24, Colors.white10],
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: CustomText(
+                        text: "Prompt : ${widget.prompt}",
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-              Expanded(
-                flex: 4,
-                child: Container(
-                  margin: const EdgeInsets.only(left: 8, right: 8, bottom: 8),
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(32),
-                    border: Border.all(color: Colors.white.withOpacity(0.2)),
-                  ),
-                  child: FutureBuilder<Recipe>(
-                    future: _recipeFuture,
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: SparkleLoader());
-                      } else if (snapshot.hasError) {
-                        return Center(child: Text("Error: ${snapshot.error}"));
-                      } else if (!snapshot.hasData || snapshot.data!.steps.isEmpty) {
-                        return const Center(child: Text("No steps found."));
-                      }
-
-                      final recipe = snapshot.data!;
-                      String completeSteps = "Here are the steps to cook your dish:\n";
-                      for (int i = 0; i < recipe.steps.length; i++) {
-                        completeSteps += "Step ${i + 1}: ${recipe.steps[i].step}\n";
-                      }
-                      if (!spoken) {
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          final tts = ref.read(ttsServiceProvider);
-                          tts.speak(completeSteps);
-                          setState(() {
-                            spoken = true;
-                          });
-                        });
-                      }
-                      final steps = List.generate(
-                        recipe.steps.length,
-                        (i) => 'Step ${i + 1} : ${recipe.steps[i].step}',
-                      );
-
-                      return ListView.builder(
-                        itemCount: steps.length + 1,
-                        itemBuilder: (context, index) {
-                          if (index < steps.length) {
-                            return _AnimatedTextCard(
-                              text: steps[index],
-                              delay: Duration(milliseconds: 300 * index),
-                            );
-                          } else {
-                            return const SizedBox(height: 60); 
+                Expanded(
+                  flex: 5,
+                  child: GlassmorphicContainer(
+                    margin: EdgeInsets.all(8),
+                    width: double.infinity,
+                    height: h * 0.8,
+                    borderRadius: 25,
+                    blur: 8,
+                    alignment: Alignment.center,
+                    border: 2,
+                    linearGradient: LinearGradient(
+                      colors: [
+                        Colors.white.withAlpha(51),
+                        Colors.white38.withAlpha(26),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderGradient: LinearGradient(
+                      colors: [Colors.white24, Colors.white10],
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: FutureBuilder<Recipe>(
+                        future: _recipeFuture,
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState == ConnectionState.waiting) {
+                            return const Center(child: SparkleLoader());
+                          } else if (snapshot.hasError) {
+                            return Center(child: Text("Error: ${snapshot.error}"));
+                          } else if (!snapshot.hasData || snapshot.data!.steps.isEmpty) {
+                            return const Center(child: Text("No steps found."));
                           }
+                          final recipe = snapshot.data!;
+                          if (_loadedRecipe != recipe) {
+                            // Only update if different to avoid unnecessary rebuilds
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              setState(() {
+                                _loadedRecipe = recipe;
+                              });
+                            });
+                          }
+                          String completeSteps = "Here are the steps to cook your dish:\n";
+                          for (int i = 0; i < recipe.steps.length; i++) {
+                            completeSteps += "Step ${i + 1}: ${recipe.steps[i].step}\n";
+                          }
+                          if (!spoken) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              final tts = ref.read(ttsServiceProvider);
+                              tts.speak(completeSteps);
+                              setState(() {
+                                spoken = true;
+                              });
+                            });
+                          }
+                          final steps = List.generate(
+                            recipe.steps.length,
+                            (i) => 'Step ${i + 1} : ${recipe.steps[i].step}',
+                          );
+                      
+                          return ListView.builder(
+                            itemCount: steps.length + 1,
+                            itemBuilder: (context, index) {
+                              if (index < steps.length) {
+                                return _AnimatedTextCard(
+                                  text: steps[index],
+                                  delay: Duration(milliseconds: 300 * index),
+                                );
+                              } else {
+                                return const SizedBox(height: 60); 
+                              }
+                            },
+                          );
                         },
-                      );
-                    },
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
+        ],
       ),
       floatingActionButton: FutureBuilder<Recipe>(
         future: _recipeFuture,

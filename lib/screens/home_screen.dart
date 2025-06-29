@@ -48,14 +48,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     ref.read(activeScreenProvider.notifier).state = 'home';
 
     Future.microtask((){
-      ref.read(screenCallbackProvider.notifier).state = (String text) {
+      ref.read(screenCallbackProvider.notifier).state = (String text) async {
       if (mounted) {
         setState(() {
           recognizedText = text;
         });
 
-        ref.read(wakeupServiceProvider).dispose();
-
+        await ref.read(wakeupServiceProvider).dispose();
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -95,25 +94,57 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ],
               ),
             ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(32.0),
-                  child: CustomText(
+          ),
+          
+          Positioned.fill(
+            child: Opacity(
+              opacity: 0.3,
+              child: Image.asset(
+                'assets/bg.png', // Make sure this path is correct and bg.png is in your assets
+                fit: BoxFit.cover,
+                
+              ),
+            ),
+          ),
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32.0),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Glowing glassmorphic blur behind the text
+                  Container(
+                    width: w/3,
+                    height: w/3,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Color(0xFF3EDFCF).withOpacity(0.1), // Center glow
+                      boxShadow: [
+                        BoxShadow(
+                          color: Color(0xFF3EDFCF).withOpacity(0.5), // Glow color
+                          blurRadius: 100, // Intensity of blur
+                          spreadRadius: 50, // Spread of the glow
+                        ),
+                      ],
+                    ),
+                  ),
+                  CustomText(
                     text: recognizedText.isEmpty
                         ? isListening
                             ? "Listening..."
-                            : 'Hi Ramit,\n Which recipe are we whipping up today?'
+                            : 'Hi Ramit,\nWhich recipe are we whipping up today?'
                         : recognizedText,
                     size: w / 9,
                     bold: true,
                     alignCenter: true,
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
+
+
+          
           Positioned(
             top: 40,
             left: 16,
@@ -162,6 +193,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             ),
           ),
+          
         ],
       ),
       floatingActionButton: Stack(
