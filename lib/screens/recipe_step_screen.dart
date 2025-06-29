@@ -77,29 +77,37 @@ class _RecipeStepsScreenState extends ConsumerState<RecipeStepsScreen> {
 
         final stepIndex = _currentPage.clamp(0, widget.recipe.steps.length - 1);
         final step = widget.recipe.steps[stepIndex];
-        if (step.time > 0) {
+        if (userInput.contains('start timer') ||
+          userInput.contains('pause timer') ||
+          userInput.contains('resume timer') ||
+          userInput.contains('reset timer')) {
           final tts = ref.read(ttsServiceProvider);
-          if (userInput.contains('start timer')) {
-            _startTimer(stepIndex, step.time);
-            tts.speak("Timer started");
+          if (step.time > 0) {
+            if (userInput.contains('start timer')) {
+              _startTimer(stepIndex, step.time);
+              tts.speak("Timer started");
+              return;
+            }
+            if (userInput.contains('pause timer')) {
+              _pauseTimer();
+              tts.speak("Timer paused");
+              return;
+            }
+            if (userInput.contains('resume timer')) {
+              _resumeTimer();
+              tts.speak("Timer resumed");
+              return;
+            }
+            if (userInput.contains('reset timer')) {
+              _resetTimer(stepIndex, step.time);
+              tts.speak("Timer reset");
+              return;
+            }
+          } else {
+            tts.speak("No timer is available for this step.");
             return;
           }
-          if (userInput.contains('pause timer')) {
-            _pauseTimer();
-            tts.speak("Timer paused");
-            return;
-          }
-          if (userInput.contains('resume timer')) {
-            _resumeTimer();
-            tts.speak("Timer resumed");
-            return;
-          }
-          if (userInput.contains('reset timer')) {
-            _resetTimer(stepIndex, step.time);
-            tts.speak("Timer reset");
-            return;
-          }
-        }
+      }
         final referenceText =
             '${widget.recipe.dishName}\nStep: ${step.step}\nDescription: ${step.description}';
 
