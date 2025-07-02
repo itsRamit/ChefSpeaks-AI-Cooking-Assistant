@@ -1,5 +1,7 @@
+import 'dart:developer';
 import 'dart:ui';
 
+import 'package:chefspeaks/main.dart';
 import 'package:chefspeaks/providers/voice_handler_provider.dart';
 import 'package:chefspeaks/providers/wakeup_service_provider.dart';
 import 'package:chefspeaks/screens/recipe_screen.dart';
@@ -17,10 +19,11 @@ class HomeScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends ConsumerState<HomeScreen> {
+class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
   final TextEditingController _textController = TextEditingController();
   String recognizedText = '';
   bool isTyping = false;
+  VoidCallback? _cancelWakeListener;
 
   @override
   void initState() {
@@ -32,23 +35,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       });
     });
 
+    final tts = ref.read(ttsServiceProvider);
+    tts.speak("Hey Ramit, I'm your personal chef. How can I assist you today?");
+  }
+
+  void _setupWakeupServiceAndCallback() async {
+    await ref.read(wakeupServiceProvider).dispose();
     ref.read(wakeupServiceProvider).initialize(
       onWakeWordDetected: () {
         ref.read(voiceHandlerProvider).handleWakeAndListen();
       },
     );
-    final tts = ref.read(ttsServiceProvider);
-    tts.speak("Hey Ramit, I'm your personal chef. How can I assist you today?");
-  }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-
-    ref.read(activeScreenProvider.notifier).state = 'home';
-
-    Future.microtask((){
-      ref.read(screenCallbackProvider.notifier).state = (String text) async {
+    ref.read(screenCallbackProvider.notifier).state = (String text) async {
       if (mounted) {
         setState(() {
           recognizedText = text;
@@ -63,11 +62,55 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         );
       }
     };
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    routeObserver.subscribe(this, ModalRoute.of(context)!);
+    Future.microtask(() {
+      if (!mounted || !(ModalRoute.of(context)?.isCurrent ?? false)) return;
+      ref.read(activeScreenProvider.notifier).state = 'home';
+      _cancelWakeListener?.call();
+      _setupWakeupServiceAndCallback();
     });
   }
 
   @override
+  void didPopNext() {
+    if (!mounted || !(ModalRoute.of(context)?.isCurrent ?? false)) return;
+    ref.read(wakeupServiceProvider).dispose().then((_) async {
+      if (!mounted) return;
+      ref.read(activeScreenProvider.notifier).state = 'home';
+      if (!mounted) return;
+      ref.read(wakeupServiceProvider).initialize(
+        onWakeWordDetected: () {
+          if (!mounted) return;
+          ref.read(voiceHandlerProvider).handleWakeAndListen();
+        },
+      );
+      if (!mounted) return;
+      ref.read(screenCallbackProvider.notifier).state = (String text) async {
+        if (!mounted) return;
+        await ref.read(wakeupServiceProvider).dispose();
+        if (!mounted) return;
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => RecipeScreen(prompt: text),
+          ),
+        );
+      };
+    });
+    recognizedText = '';
+    isTyping = false;
+  }
+
+
+  @override
   void dispose() {
+    routeObserver.unsubscribe(this);
+    _cancelWakeListener?.call();
     _textController.dispose();
     super.dispose();
   }
@@ -100,7 +143,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             child: Opacity(
               opacity: 0.3,
               child: Image.asset(
-                'assets/bg.png', // Make sure this path is correct and bg.png is in your assets
+                'assets/bg.png',
                 fit: BoxFit.cover,
                 
               ),
@@ -112,18 +155,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  // Glowing glassmorphic blur behind the text
                   Container(
                     width: w/3,
                     height: w/3,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Color(0xFF3EDFCF).withOpacity(0.1), // Center glow
+                      color: Color(0xFF3EDFCF).withValues(alpha: 0.1),
                       boxShadow: [
                         BoxShadow(
-                          color: Color(0xFF3EDFCF).withOpacity(0.5), // Glow color
-                          blurRadius: 100, // Intensity of blur
-                          spreadRadius: 50, // Spread of the glow
+                          color: Color(0xFF3EDFCF).withValues(alpha: 0.5),
+                          blurRadius: 100,
+                          spreadRadius: 50,
                         ),
                       ],
                     ),
@@ -142,9 +184,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             ),
           ),
-
-
-          
           Positioned(
             top: 40,
             left: 16,

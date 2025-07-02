@@ -73,6 +73,30 @@ class VoiceHandler {
     });
   }
 
+  Future<void> resetSTT() async {
+    final sttService = ref.read(speechServiceProvider);
+    sttService.stop();
+
+    final wakeupService = ref.read(wakeupServiceProvider);
+
+    final success = await sttService.initialize(
+      onStatus: (status) async {
+        if (status == 'notListening') {
+          ref.read(isListeningProvider.notifier).state = false;
+          await wakeupService.resume();
+        }
+      },
+      onError: (error) {
+        log("STT Error (reset): $error");
+        ref.read(isListeningProvider.notifier).state = false;
+      },
+    );
+
+    ref.read(isListeningProvider.notifier).state = false;
+    log("STT reset complete with success = $success");
+  }
+
+
   void dispose() {
     _debounceTimer?.cancel();
   }

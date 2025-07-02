@@ -27,7 +27,8 @@ class RecipeScreen extends ConsumerStatefulWidget {
 class _RecipeScreenState extends ConsumerState<RecipeScreen> with RouteAware {
   late Future<Recipe> _recipeFuture;
   Recipe? _loadedRecipe;
-  bool spoken = false;
+  VoidCallback? _cancelWakeListener;
+  bool _spoken = false;
   @override
   void initState() {
     super.initState();
@@ -37,54 +38,105 @@ class _RecipeScreenState extends ConsumerState<RecipeScreen> with RouteAware {
 
   @override
   void didChangeDependencies() {
-    super.didChangeDependencies();
-    routeObserver.subscribe(this, ModalRoute.of(context)!);
+  super.didChangeDependencies();
+  routeObserver.subscribe(this, ModalRoute.of(context)!);
 
-    Future.microtask(() {
-      
+  Future.microtask(() {
+    if (!mounted || !(ModalRoute.of(context)?.isCurrent ?? false)) return;
+
+    log("didChangeDependencies called in recipe screen");
+
+    if (!mounted) return;
+    ref.read(activeScreenProvider.notifier).state = 'recipe';
+
+    _cancelWakeListener?.call();
+
+    if (!mounted) return;
+    ref.read(wakeupServiceProvider).initialize(
+      onWakeWordDetected: () {
+        if (!mounted) return;
+        ref.read(voiceHandlerProvider).handleWakeAndListen();
+        log("Wake word detected, handling voice input");
+      },
+    );
+
+    if (!mounted) return;
+    ref.read(screenCallbackProvider.notifier).state = (String text) async {
+      if (!mounted) return;
+      log("text: $text");
+
+      if (text.toLowerCase().contains('continue')) {
+        if (!mounted) return;
+        final tts = ref.read(ttsServiceProvider);
+        tts.stop();
+        if (!mounted) return;
+        await ref.read(wakeupServiceProvider).dispose();
+
+        if (!mounted || _loadedRecipe == null) return;
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => RecipeStepsScreen(recipe: _loadedRecipe!),
+          ),
+        );
+      } else {
+        log("Unrecognized command: $text");
+      }
+    };
+  });
+}
+
+
+  @override
+  void dispose() {
+    routeObserver.unsubscribe(this);
+    _cancelWakeListener?.call();
+    super.dispose();
+  }
+
+
+  @override
+  void didPopNext() {
+    log("HERRR");
+    if (!mounted || !(ModalRoute.of(context)?.isCurrent ?? false)) return;
+
+    ref.read(wakeupServiceProvider).dispose().then((_) async {
+      if (!mounted) return;
       ref.read(activeScreenProvider.notifier).state = 'recipe';
+      if (!mounted) return;
       ref.read(wakeupServiceProvider).initialize(
         onWakeWordDetected: () {
-          
+          if (!mounted) return;
+          log("HERRR 3");
           ref.read(voiceHandlerProvider).handleWakeAndListen();
         },
       );
-      ref.read(screenCallbackProvider.notifier).state = (String text) async  {
+      if (!mounted) return;
+      ref.read(screenCallbackProvider.notifier).state = (String text) async {
+        if (!mounted) return;
         log("text: $text");
-        if(text.toLowerCase().contains('continue')){
+
+        if (text.toLowerCase().contains('continue')) {
+          if (!mounted) return;
           final tts = ref.read(ttsServiceProvider);
           tts.stop();
+          log("HERRR 4");
+          if (!mounted) return;
           await ref.read(wakeupServiceProvider).dispose();
+
+          if (!mounted || _loadedRecipe == null) return;
           Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => RecipeStepsScreen(recipe: _loadedRecipe!),
-              ),
-            );
+            context,
+            MaterialPageRoute(
+              builder: (context) => RecipeStepsScreen(recipe: _loadedRecipe!),
+            ),
+          );
         } else {
           log("Unrecognized command: $text");
         }
       };
     });
   }
-
-  @override
-  void dispose() {
-    routeObserver.unsubscribe(this);
-    ref.read(wakeupServiceProvider).pause();
-    super.dispose();
-  }
-
-  @override
-  void didPopNext() {
-    // Called when coming back to this screen
-    ref.read(wakeupServiceProvider).initialize(
-      onWakeWordDetected: () {
-        ref.read(voiceHandlerProvider).handleWakeAndListen();
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final h = MediaQuery.of(context).size.height;
@@ -189,6 +241,7 @@ class _RecipeScreenState extends ConsumerState<RecipeScreen> with RouteAware {
                           if (_loadedRecipe != recipe) {
                             // Only update if different to avoid unnecessary rebuilds
                             WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (!mounted) return;
                               setState(() {
                                 _loadedRecipe = recipe;
                               });
@@ -198,12 +251,13 @@ class _RecipeScreenState extends ConsumerState<RecipeScreen> with RouteAware {
                           for (int i = 0; i < recipe.steps.length; i++) {
                             completeSteps += "Step ${i + 1}: ${recipe.steps[i].step}\n";
                           }
-                          if (!spoken) {
+                          if (!_spoken) {
                             WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if(!mounted) return;
                               final tts = ref.read(ttsServiceProvider);
                               tts.speak(completeSteps);
                               setState(() {
-                                spoken = true;
+                                _spoken = true;
                               });
                             });
                           }

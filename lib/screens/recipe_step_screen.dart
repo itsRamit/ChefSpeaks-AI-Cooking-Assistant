@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:developer';
 import 'dart:ui';
+import 'package:chefspeaks/main.dart';
 import 'package:chefspeaks/providers/voice_handler_provider.dart';
 import 'package:chefspeaks/services/chat_service.dart';
 import 'package:chefspeaks/widgets/voice_button.dart';
@@ -20,7 +21,7 @@ class RecipeStepsScreen extends ConsumerStatefulWidget {
   ConsumerState<RecipeStepsScreen> createState() => _RecipeStepsScreenState();
 }
 
-class _RecipeStepsScreenState extends ConsumerState<RecipeStepsScreen> {
+class _RecipeStepsScreenState extends ConsumerState<RecipeStepsScreen> with RouteAware {
   late PageController _pageController;
   int _currentPage = 0;
   int? _activeTimerIndex;
@@ -29,6 +30,7 @@ class _RecipeStepsScreenState extends ConsumerState<RecipeStepsScreen> {
   Timer? _timer;
   bool _isPaused = false;
   List<bool> spoken = [];
+  VoidCallback? _cancelWakeListener;
 
   @override
   void initState() {
@@ -52,17 +54,22 @@ class _RecipeStepsScreenState extends ConsumerState<RecipeStepsScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    Future.microtask(() {
+    routeObserver.subscribe(this, ModalRoute.of(context)!);
+    Future.microtask(() async {
+      if (!mounted) return;
       log("Here in didChangeDependencies");
       ref.read(activeScreenProvider.notifier).state = 'recipeSteps';
-      ref.read(wakeupServiceProvider).initialize(
+      _cancelWakeListener?.call();
+      await ref.read(wakeupServiceProvider).initialize(
         onWakeWordDetected: () {
+          if (!mounted) return;
           log("Wake word detected, handling wake and listen");
           ref.read(voiceHandlerProvider).handleWakeAndListen();
         },
       );
       log("Here in didChangeDependencies after initialization");
       ref.read(screenCallbackProvider.notifier).state = (String text) async {
+        if (!mounted) return;
         final userInput = text.trim();
         if (userInput.isEmpty) return;
 
@@ -78,9 +85,9 @@ class _RecipeStepsScreenState extends ConsumerState<RecipeStepsScreen> {
         final stepIndex = _currentPage.clamp(0, widget.recipe.steps.length - 1);
         final step = widget.recipe.steps[stepIndex];
         if (userInput.contains('start timer') ||
-          userInput.contains('pause timer') ||
-          userInput.contains('resume timer') ||
-          userInput.contains('reset timer')) {
+            userInput.contains('pause timer') ||
+            userInput.contains('resume timer') ||
+            userInput.contains('reset timer')) {
           final tts = ref.read(ttsServiceProvider);
           if (step.time > 0) {
             if (userInput.contains('start timer')) {
@@ -107,7 +114,8 @@ class _RecipeStepsScreenState extends ConsumerState<RecipeStepsScreen> {
             tts.speak("No timer is available for this step.");
             return;
           }
-      }
+        }
+
         final referenceText =
             '${widget.recipe.dishName}\nStep: ${step.step}\nDescription: ${step.description}';
 
@@ -130,7 +138,9 @@ class _RecipeStepsScreenState extends ConsumerState<RecipeStepsScreen> {
 
   @override
   void dispose() {
+    _cancelWakeListener?.call();
     _timer?.cancel();
+    routeObserver.unsubscribe(this);
     _pageController.dispose();
     super.dispose();
   }

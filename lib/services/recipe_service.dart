@@ -9,7 +9,7 @@ class RecipeService {
 
   Future<Recipe> getRecipe(String userInput) async {
     final response = await _apiService.post(
-      baseUrl: '192.168.214.11:3000',
+      baseUrl: '192.168.184.11:3000',
       path: '/api/generate-recipe',
       body: {
         'userInput': userInput,
