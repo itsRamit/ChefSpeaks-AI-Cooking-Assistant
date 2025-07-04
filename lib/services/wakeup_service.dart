@@ -1,10 +1,13 @@
 import 'package:flutter/services.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:porcupine_flutter/porcupine_manager.dart';
 
 typedef WakeWordCallback = void Function();
 
 class WakeupService {
   static final WakeupService _instance = WakeupService._internal();
+  final accessKey = dotenv.env['PORCUPINE_ACCESS_KEY'] ?? '';
+  final path = "assets/Hey-chef_en_android_v3_0_0.ppn";
   factory WakeupService() => _instance;
   WakeupService._internal();
 
@@ -19,8 +22,8 @@ class WakeupService {
 
     try {
       _porcupineManager = await PorcupineManager.fromKeywordPaths(
-        "MHqBxYb0dSu2R8o5ETtEKYzfr7EZ+pneovbBLlg9GXeOySRgkTogFw==",
-        ["assets/Hey-chef_en_android_v3_0_0.ppn"],
+        accessKey,
+        [path],
         (int keywordIndex) => onWakeWordDetected(),
       );
       await _porcupineManager?.start();
