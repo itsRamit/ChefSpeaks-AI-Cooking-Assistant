@@ -21,18 +21,29 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
+    _checkLoginAndProceed();
+  }
 
-    Timer(const Duration(seconds: 2), () {
+  Future<void> _checkLoginAndProceed() async {
+    final prefs = await SharedPreferences.getInstance();
+    final isLoggedIn = prefs.getBool(SharedPrefsKeys.isLoggedIn) ?? false;
+
+    if (isLoggedIn) {
+      await Future.delayed(const Duration(seconds: 2));
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/home');
+      }
+    } else {
+      await Future.delayed(const Duration(seconds: 2));
       if (mounted) {
         setState(() {
           showLogin = true;
         });
       }
-    });
+    }
   }
 
   void _onAuthError(Object error) {
-    // Handle authentication error
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Authentication failed: ${error}')),
     );
@@ -71,11 +82,8 @@ class _SplashScreenState extends State<SplashScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Logo
               const Icon(Icons.restaurant_menu, size: 80, color: Colors.black),
               SizedBox(height: h / 40),
-
-              // Title
               Text(
                 'ChefSpeaks',
                 style: GoogleFonts.manrope(
@@ -84,8 +92,6 @@ class _SplashScreenState extends State<SplashScreen> {
                   color: Colors.black,
                 ),
               ),
-
-              // Subtitle
               const SizedBox(height: 12),
               Text(
                 'AI Cooking Assistant',
@@ -94,8 +100,6 @@ class _SplashScreenState extends State<SplashScreen> {
                   color: Colors.grey[700],
                 ),
               ),
-
-              // Auth buttons (after delay)
               SizedBox(height: h / 20),
               AnimatedOpacity(
                 opacity: showLogin ? 1.0 : 0.0,
@@ -111,6 +115,7 @@ class _SplashScreenState extends State<SplashScreen> {
                     redirectUrl: kIsWeb ? null : dotenv.env['SUPABASE_REDIRECT_URI'],
                     onSuccess: _onAuthSuccess,
                     onError: _onAuthError,
+                    showSuccessSnackBar: false,
                   ),
                 ),
               ),
