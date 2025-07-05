@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:chefspeaks/main.dart';
 import 'package:chefspeaks/providers/voice_handler_provider.dart';
 import 'package:chefspeaks/providers/wakeup_service_provider.dart';
+import 'package:chefspeaks/screens/profile_sreen.dart';
 import 'package:chefspeaks/screens/recipe_screen.dart';
 import 'package:chefspeaks/widgets/custom_text.dart';
 import 'package:chefspeaks/widgets/voice_button.dart';
@@ -228,7 +229,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
                   },
                   child: const Icon(Icons.person, color: Colors.white),
                 ),
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.push(context, MaterialPageRoute(
+                    builder: (context) => const ProfileScreen(),
+                  ));
+                },
               ),
             ),
           ),
