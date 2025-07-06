@@ -1,6 +1,7 @@
 const { fetchRecipeFromLLM } = require('../models/recipe_model');
+const supabase = require('../config/db');
 
-// Helper function to extract text between tags
+
 const extractBetween = (text, startTag, endTag) => {
   const regex = new RegExp(`${startTag}([\\s\\S]*?)${endTag}`, 'i');
   const match = text.match(regex);
@@ -59,4 +60,37 @@ const generateRecipe = async (req, res) => {
   }
 };
 
-module.exports = { generateRecipe };
+const addFavorite = async (req, res) => {
+  const { user_id, dish_name, estimated_time, ingredients, steps } = req.body;
+
+  try {
+    const { error } = await supabase
+      .from('Favorites')
+      .insert([{ user_id, dish_name, estimated_time, ingredients, steps }]);
+
+    if (error) throw error;
+
+    res.status(201).json({ message: 'Favorite added successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+const getFavorites = async (req, res) => {
+  const { user_id } = req.query;
+
+  try {
+    const { data, error } = await supabase
+      .from('Favorites')
+      .select('*')
+      .eq('user_id', user_id);
+
+    if (error) throw error;
+
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+module.exports = { generateRecipe, addFavorite, getFavorites };
