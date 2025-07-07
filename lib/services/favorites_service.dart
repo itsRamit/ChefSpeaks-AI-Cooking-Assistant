@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:chefspeaks/models/favorite_model.dart';
 import 'package:chefspeaks/models/recipe_model.dart';
 import 'package:chefspeaks/services/api_service.dart';
 import 'package:chefspeaks/utils/api_constants.dart';
@@ -15,17 +18,28 @@ class FavoriteService {
         'dish_name': recipe.dishName,
         'estimated_time': recipe.estimatedTime,
         'ingredients': recipe.ingredients,
-        'steps': recipe.steps,
+        'steps': recipe.steps.map((e) => {
+            'step': e.step,
+            'description': e.description,
+            'time': e.time,
+        }).toList(),
+
       },
     );
   }
 
-  Future<List<Recipe>> getFavorites(String userId) async {
+  Future<List<Favorite>> getFavorites(String userId) async {
     final response = await _apiService.get(
       baseUrl: ApiConstants.baseUrl,
-      path: '${ApiConstants.favorites}/$userId',
+      path: ApiConstants.favorites,
+      queryParams: {'user_id': userId},
     );
 
-    return (response as List).map((json) => Recipe.fromJson(json)).toList();
+    List<Favorite> favorites = (response as List)
+        .map((json) => Favorite.fromJson(json))
+        .toList();
+
+    return favorites;
   }
+
 }

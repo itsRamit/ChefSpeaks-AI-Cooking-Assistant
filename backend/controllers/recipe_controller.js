@@ -21,7 +21,8 @@ const generateRecipe = async (req, res) => {
     const raw = await fetchRecipeFromLLM(userInput);
 
     const dish_name = extractBetween(raw, '<DISH_NAME>', '</DISH_NAME>');
-    const estimated_time = extractBetween(raw, '<ESTIMATED_TIME>', '</ESTIMATED_TIME>');
+    const estimated_time_str = extractBetween(raw, '<ESTIMATED_TIME>', '</ESTIMATED_TIME>');
+    const estimated_time = parseInt(estimated_time_str, 10) || 0;
 
     const ingredientsRaw = extractBetween(raw, '<INGREDIENTS>', '</INGREDIENTS>');
     const ingredients = ingredientsRaw

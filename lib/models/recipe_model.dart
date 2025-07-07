@@ -1,7 +1,7 @@
 class Recipe {
   final String status;
   final String dishName;
-  final String estimatedTime;
+  final int estimatedTime;
   final List<String> ingredients;
   final List<RecipeStep> steps;
 

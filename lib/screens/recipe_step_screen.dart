@@ -4,10 +4,13 @@ import 'dart:ui';
 import 'package:chefspeaks/main.dart';
 import 'package:chefspeaks/providers/voice_handler_provider.dart';
 import 'package:chefspeaks/services/chat_service.dart';
+import 'package:chefspeaks/services/favorites_service.dart';
+import 'package:chefspeaks/utils/shared_prefs_keys.dart';
 import 'package:chefspeaks/widgets/voice_button.dart';
 import 'package:chefspeaks/widgets/voice_hint_bubble.dart';
 import 'package:flutter/material.dart';
 import 'package:glassmorphism/glassmorphism.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/recipe_model.dart';
 import '../widgets/custom_text.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,7 +18,8 @@ import 'package:chefspeaks/providers/wakeup_service_provider.dart';
 
 class RecipeStepsScreen extends ConsumerStatefulWidget {
   final Recipe recipe;
-  const RecipeStepsScreen({super.key, required this.recipe});
+  final bool isFromFavorites;
+  const RecipeStepsScreen({super.key, required this.recipe, required this.isFromFavorites});
 
   @override
   ConsumerState<RecipeStepsScreen> createState() => _RecipeStepsScreenState();
@@ -29,6 +33,7 @@ class _RecipeStepsScreenState extends ConsumerState<RecipeStepsScreen> with Rout
   int _initialSeconds = 0;
   Timer? _timer;
   bool _isPaused = false;
+  bool _isFavorite = false;
   List<bool> spoken = [];
   VoidCallback? _cancelWakeListener;
 
@@ -135,6 +140,27 @@ class _RecipeStepsScreenState extends ConsumerState<RecipeStepsScreen> with Rout
       };
     });
   }
+
+  Future<void> _handleAddToFavorite() async {
+    if(widget.isFromFavorites || _isFavorite) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Already in favorites')),
+      );
+      return;
+    }
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getString(SharedPrefsKeys.userId);
+
+    if (userId != null && !_isFavorite) {
+      final service = FavoriteService();
+      await service.addFavorite(widget.recipe, userId);
+      setState(() => _isFavorite = true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Added to favorites')),
+      );
+    }
+  }
+
 
   @override
   void dispose() {
@@ -424,9 +450,7 @@ class _RecipeStepsScreenState extends ConsumerState<RecipeStepsScreen> with Rout
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   GestureDetector(
-                    onTap: () {
-                      // TODO: Add to favourite logic
-                    },
+                    onTap: _handleAddToFavorite,
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 7),
                       decoration: BoxDecoration(
@@ -441,9 +465,13 @@ class _RecipeStepsScreenState extends ConsumerState<RecipeStepsScreen> with Rout
                           ),
                         ],
                       ),
-                      child: Icon(Icons.favorite_border, color: Colors.white),
+                      child: Icon(
+                        widget.isFromFavorites || _isFavorite? Icons.favorite : Icons.favorite_border,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
+
                   GestureDetector(
                     onTap: () {
                       Navigator.of(context).popUntil((route) => route.isFirst);

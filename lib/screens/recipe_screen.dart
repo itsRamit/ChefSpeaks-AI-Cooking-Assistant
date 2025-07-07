@@ -76,7 +76,7 @@ class _RecipeScreenState extends ConsumerState<RecipeScreen> with RouteAware {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => RecipeStepsScreen(recipe: _loadedRecipe!),
+            builder: (context) => RecipeStepsScreen(recipe: _loadedRecipe!, isFromFavorites: false,),
           ),
         );
       } else {
@@ -128,7 +128,7 @@ class _RecipeScreenState extends ConsumerState<RecipeScreen> with RouteAware {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => RecipeStepsScreen(recipe: _loadedRecipe!),
+              builder: (context) => RecipeStepsScreen(recipe: _loadedRecipe!, isFromFavorites: false,),
             ),
           );
         } else {
@@ -354,7 +354,7 @@ class _RecipeScreenState extends ConsumerState<RecipeScreen> with RouteAware {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) => RecipeStepsScreen(recipe: recipe),
+                                      builder: (context) => RecipeStepsScreen(recipe: recipe, isFromFavorites: false,),
                                     ),
                                   );
                                 },
