@@ -72,5 +72,42 @@ class ApiService {
       throw Exception("GET request failed: $e");
     }
   }
+
+  Future<dynamic> delete({
+  required String baseUrl,
+  required String path,
+  Map<String, String>? queryParams,
+  Map<String, dynamic>? body,
+  bool isHttps = false,
+}) async {
+    final uri = isHttps
+        ? Uri.https(baseUrl, path, queryParams)
+        : Uri.http(baseUrl, path, queryParams);
+
+    try {
+      final response = await _client.delete(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: body != null ? jsonEncode(body) : null,
+      );
+
+      log("DELETE ${uri.toString()}");
+      log("Status: ${response.statusCode}");
+      log("Body: ${response.body}");
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return json.decode(response.body);
+      } else {
+        throw Exception("Error: ${response.statusCode} ${response.reasonPhrase}");
+      }
+    } catch (e) {
+      log("DELETE Error: $e");
+      throw Exception("DELETE request failed: $e");
+    }
+  }
+
 }
 
