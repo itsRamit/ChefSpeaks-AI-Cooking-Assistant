@@ -94,4 +94,27 @@ const getFavorites = async (req, res) => {
   }
 };
 
-module.exports = { generateRecipe, addFavorite, getFavorites };
+const removeFavorite = async (req, res) => {
+  const { user_id, id} = req.body;
+
+  if (!user_id || !id) {
+    return res.status(400).json({ error: 'user_id, id, and created_at are required' });
+  }
+
+  try {
+    const { error } = await supabase
+      .from('Favorites')
+      .delete()
+      .match({ user_id, id: Number(id)});
+
+    if (error) throw error;
+
+    res.status(200).json({ message: 'Favorite removed successfully' });
+  } catch (err) {
+    console.error('Remove Favorite Error:', err.message);
+    res.status(500).json({ error: 'Failed to remove favorite' });
+  }
+};
+
+
+module.exports = { generateRecipe, addFavorite, getFavorites, removeFavorite };

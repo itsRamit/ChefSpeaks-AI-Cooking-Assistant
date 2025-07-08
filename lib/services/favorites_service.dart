@@ -42,4 +42,19 @@ class FavoriteService {
     return favorites;
   }
 
+  Future<void> removeFavorite({
+    required String userId,
+    required int id,
+  }) async {
+    await _apiService.delete(
+      baseUrl: ApiConstants.baseUrl,
+      path: ApiConstants.favorites,
+      body: {
+        'user_id': userId,
+        'id': id,
+      },
+    );
+  }
+
+
 }

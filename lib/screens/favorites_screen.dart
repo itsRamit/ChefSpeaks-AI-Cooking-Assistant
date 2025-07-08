@@ -48,11 +48,29 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       confirmColor: Colors.red,
     );
     if (confirmed == true) {
-      // setState(() {
-      //   favoriteRecipes.removeAt(index);
-      // });
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final userId = prefs.getString(SharedPrefsKeys.userId);
+
+        if (userId == null) {
+          throw Exception("User ID not found");
+        }
+
+        final favToRemove = favorites[index];
+        await _favoriteService.removeFavorite(
+          userId: userId,
+          id: favToRemove.id,
+        );
+
+        setState(() {
+          favorites.removeAt(index);
+        });
+      } catch (e) {
+        debugPrint("Remove Favorite Error: $e");
+      }
     }
   }
+
 
   void _cookRecipe(Recipe recipe) async {
     final confirmed = await _showConfirmation(
@@ -91,14 +109,14 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Colors.white.withOpacity(0.2),
-              Colors.white.withOpacity(0.1),
+              Colors.white.withValues(alpha: 0.2),
+              Colors.white.withValues(alpha: 0.1),
             ],
           ),
           borderGradient: LinearGradient(
             colors: [
-              Colors.white.withOpacity(0.3),
-              Colors.white.withOpacity(0.1),
+              Colors.white.withValues(alpha: 0.3),
+              Colors.white.withValues(alpha: 0.1),
             ],
           ),
           child: Material(
