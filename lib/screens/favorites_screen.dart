@@ -81,8 +81,15 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       confirmColor: Colors.green,
     );
     if (confirmed == true) {
-      Navigator.push(context, MaterialPageRoute(
-        builder: (context) => RecipeStepsScreen(recipe: recipe, isFromFavorites: true),
+      Navigator.push(context, PageRouteBuilder(
+        transitionDuration: Duration(milliseconds: 500),
+        pageBuilder: (_, __, ___) => RecipeStepsScreen(recipe: recipe, isFromFavorites: true,),
+        transitionsBuilder: (_, animation, __, child) {
+          return FadeTransition(
+            opacity: animation,
+            child: child,
+          );
+        },
       ));
     }
   }

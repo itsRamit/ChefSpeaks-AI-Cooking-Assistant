@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:chefspeaks/screens/home_screen.dart';
 import 'package:chefspeaks/utils/shared_prefs_keys.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -31,7 +32,16 @@ class _SplashScreenState extends State<SplashScreen> {
     if (isLoggedIn) {
       await Future.delayed(const Duration(seconds: 2));
       if (mounted) {
-        Navigator.pushReplacementNamed(context, '/home');
+        Navigator.pushReplacement(context, PageRouteBuilder(
+          transitionDuration: Duration(milliseconds: 500),
+          pageBuilder: (_, __, ___) => HomeScreen(),
+          transitionsBuilder: (_, animation, __, child) {
+            return FadeTransition(
+              opacity: animation,
+              child: child,
+            );
+          },
+        ));
       }
     } else {
       await Future.delayed(const Duration(seconds: 2));

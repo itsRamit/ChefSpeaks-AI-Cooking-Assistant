@@ -70,12 +70,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
         });
 
         await ref.read(wakeupServiceProvider).dispose();
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => RecipeScreen(prompt: text),
-          ),
-        );
+        Navigator.push(context, PageRouteBuilder(
+          transitionDuration: Duration(milliseconds: 500),
+          pageBuilder: (_, __, ___) => RecipeScreen(prompt: text),
+          transitionsBuilder: (_, animation, __, child) {
+            return FadeTransition(
+              opacity: animation,
+              child: child,
+            );
+          },
+        ));
       }
     };
   }
@@ -110,12 +114,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
         if (!mounted) return;
         await ref.read(wakeupServiceProvider).dispose();
         if (!mounted) return;
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => RecipeScreen(prompt: text),
-          ),
-        );
+        Navigator.push(context, PageRouteBuilder(
+          transitionDuration: Duration(milliseconds: 500),
+          pageBuilder: (_, __, ___) => RecipeScreen(prompt: text),
+          transitionsBuilder: (_, animation, __, child) {
+            return FadeTransition(
+              opacity: animation,
+              child: child,
+            );
+          },
+        ));
       };
     });
     recognizedText = '';
@@ -221,8 +229,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
                   child: const Icon(Icons.favorite, color: Colors.white),
                 ),
                 onPressed: () {
-                  Navigator.push(context, MaterialPageRoute(
-                    builder: (context) => const FavoritesScreen(),
+                  Navigator.push(context, PageRouteBuilder(
+                    transitionDuration: Duration(milliseconds: 500),
+                    pageBuilder: (_, __, ___) => const FavoritesScreen(),
+                    transitionsBuilder: (_, animation, __, child) {
+                      return FadeTransition(
+                        opacity: animation,
+                        child: child,
+                      );
+                    },
                   ));
                 },
               ),
@@ -249,8 +264,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
                   child: const Icon(Icons.person, color: Colors.white),
                 ),
                 onPressed: () {
-                  Navigator.push(context, MaterialPageRoute(
-                    builder: (context) => const ProfileScreen(),
+                  Navigator.push(context, PageRouteBuilder(
+                    transitionDuration: Duration(milliseconds: 500),
+                    pageBuilder: (_, __, ___) => const ProfileScreen(),
+                    transitionsBuilder: (_, animation, __, child) {
+                      return FadeTransition(
+                        opacity: animation,
+                        child: child,
+                      );
+                    },
                   ));
                 },
               ),

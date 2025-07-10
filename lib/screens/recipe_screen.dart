@@ -73,12 +73,16 @@ class _RecipeScreenState extends ConsumerState<RecipeScreen> with RouteAware {
         await ref.read(wakeupServiceProvider).dispose();
 
         if (!mounted || _loadedRecipe == null) return;
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => RecipeStepsScreen(recipe: _loadedRecipe!, isFromFavorites: false,),
-          ),
-        );
+        Navigator.push(context, PageRouteBuilder(
+          transitionDuration: Duration(milliseconds: 500),
+          pageBuilder: (_, __, ___) => RecipeStepsScreen(recipe: _loadedRecipe!, isFromFavorites: false,),
+          transitionsBuilder: (_, animation, __, child) {
+            return FadeTransition(
+              opacity: animation,
+              child: child,
+            );
+          },
+        ));
       } else {
         log("Unrecognized command: $text");
       }
@@ -125,12 +129,16 @@ class _RecipeScreenState extends ConsumerState<RecipeScreen> with RouteAware {
           await ref.read(wakeupServiceProvider).dispose();
 
           if (!mounted || _loadedRecipe == null) return;
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => RecipeStepsScreen(recipe: _loadedRecipe!, isFromFavorites: false,),
-            ),
-          );
+          Navigator.push(context, PageRouteBuilder(
+            transitionDuration: Duration(milliseconds: 500),
+            pageBuilder: (_, __, ___) => RecipeStepsScreen(recipe: _loadedRecipe!, isFromFavorites: false,),
+            transitionsBuilder: (_, animation, __, child) {
+              return FadeTransition(
+                opacity: animation,
+                child: child,
+              );
+            },
+          ));
         } else {
           log("Unrecognized command: $text");
         }
@@ -351,12 +359,16 @@ class _RecipeScreenState extends ConsumerState<RecipeScreen> with RouteAware {
                               : () {
                                   final tts = ref.read(ttsServiceProvider);
                                   tts.stop();
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => RecipeStepsScreen(recipe: recipe, isFromFavorites: false,),
-                                    ),
-                                  );
+                                  Navigator.push(context, PageRouteBuilder(
+                                    transitionDuration: Duration(milliseconds: 500),
+                                    pageBuilder: (_, __, ___) => RecipeStepsScreen(recipe: _loadedRecipe!, isFromFavorites: false,),
+                                    transitionsBuilder: (_, animation, __, child) {
+                                      return FadeTransition(
+                                        opacity: animation,
+                                        child: child,
+                                      );
+                                    },
+                                  ));
                                 },
                           child: Container(
                             height: w / 7,
