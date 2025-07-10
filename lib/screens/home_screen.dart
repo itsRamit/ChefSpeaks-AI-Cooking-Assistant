@@ -7,12 +7,14 @@ import 'package:chefspeaks/providers/wakeup_service_provider.dart';
 import 'package:chefspeaks/screens/favorites_screen.dart';
 import 'package:chefspeaks/screens/profile_sreen.dart';
 import 'package:chefspeaks/screens/recipe_screen.dart';
+import 'package:chefspeaks/utils/shared_prefs_keys.dart';
 import 'package:chefspeaks/widgets/custom_text.dart';
 import 'package:chefspeaks/widgets/voice_button.dart';
 import 'package:chefspeaks/widgets/voice_hint_bubble.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -24,6 +26,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
   final TextEditingController _textController = TextEditingController();
   String recognizedText = '';
+  String name = '';
   bool isTyping = false;
   VoidCallback? _cancelWakeListener;
 
@@ -31,15 +34,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
   void initState() {
     super.initState();
 
+    _initName();
+
     _textController.addListener(() {
       setState(() {
         isTyping = _textController.text.trim().isNotEmpty;
       });
     });
-
-    final tts = ref.read(ttsServiceProvider);
-    tts.speak("Hey Ramit, I'm your personal chef. How can I assist you today?");
   }
+
+  Future<void> _initName() async {
+    final prefs = await SharedPreferences.getInstance();
+    final fullName = prefs.getString(SharedPrefsKeys.name) ?? 'User';
+    final firstName = fullName.trim().split(' ').first;
+    setState(() {
+      name = firstName;
+    });
+    final tts = ref.read(ttsServiceProvider);
+    tts.speak("Hey $name, I'm your personal chef. How can I assist you today?");
+  }
+
 
   void _setupWakeupServiceAndCallback() async {
     await ref.read(wakeupServiceProvider).dispose();
@@ -176,7 +190,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
                     text: recognizedText.isEmpty
                         ? isListening
                             ? "Listening..."
-                            : 'Hi Ramit,\nWhich recipe are we whipping up today?'
+                            : 'Hi $name,\nWhich recipe are we whipping up today?'
                         : recognizedText,
                     size: w / 9,
                     bold: true,
